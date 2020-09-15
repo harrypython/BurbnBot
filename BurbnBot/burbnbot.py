@@ -80,7 +80,7 @@ class Burbnbot:
         except Exception as err:
             self.treat_exception(err)
 
-    def check_element_exist(self, xpath: object) -> bool:
+    def check_element_exist(self, xpath: str) -> bool:
         try:
             return len(self.driver.find_elements_by_xpath(xpath)) != 0
         except (NoSuchElementException, TimeoutException):
@@ -91,7 +91,9 @@ class Burbnbot:
             if self.check_element_exist(xpath=elxpath.login_username) and \
                     self.check_element_exist(xpath=elxpath.login_password):
                 self.driver.find_element_by_xpath(xpath=elxpath.login_username).send_keys(self.username)
+                self.driver.hide_keyboard()
                 self.driver.find_element_by_xpath(xpath=elxpath.login_password).send_keys(self.password)
+                self.driver.hide_keyboard()
                 self.driver.find_element_by_xpath(xpath=elxpath.btn_log_in).click()
                 sleep(10)
             return self.check_element_exist(xpath=elxpath.tab_bar_home)
@@ -220,9 +222,10 @@ class Burbnbot:
             sleep(2)
             self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
             sleep(2)
-            self.driver.find_element_by_xpath(xpath=elxpath.row_profile_header_container_following).click()
+            self.driver.find_element_by_xpath(xpath=elxpath.row_profile_following).click()
             self.driver.find_element_by_xpath(
                 xpath="//*[@resource-id='com.instagram.android:id/row_search_edit_text']").send_keys(username)
+            self.driver.hide_keyboard()
             if self.check_element_exist(xpath="//*[@text='No users found.']"):
                 return True
             xpath_btn_following = "//*[@text='{}']/../../..//*[@text='Following']".format(username)
@@ -338,18 +341,29 @@ class Burbnbot:
             sleep(2)
             self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
             sleep(2)
-            followers_count = int(self.driver.find_element_by_xpath(
-                xpath="//*[@resource-id='com.instagram.android:id/row_profile_header_textview_followers_count']").text)
             self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                    "row_profile_header_container_followers']").click()
+                                                    "row_profile_header_followers_container']").click()
             follow_list_username = "//*[@resource-id='com.instagram.android:id/follow_list_username']"
-            while len(users) < followers_count - 1:
+            t = 0
+            while t < 3:
                 users = users + [i.text for i in self.driver.find_elements_by_xpath(xpath=follow_list_username)]
                 users = list(dict.fromkeys(users))
                 self.scrooll_up()
+                if users[-1] == self.driver.find_element_by_xpath(xpath="({})[last()]".format(follow_list_username)).text:
+                    t += 1
+                else:
+                    t = 0
+            breakpoint()
             return users
         except Exception as err:
             self.treat_exception(err)
+
+    def str2int(self, text: str) -> int:
+        num_map = {'K': 1000, 'M': 1000000, 'B': 1000000000}
+        v = text.replace(",", "").replace(".", "").upper()
+        if v[-1] in num_map:
+            v = int(v[:-1]) * num_map.get(v[-1])
+        return int(v)
 
     def get_following(self) -> list:
         try:
@@ -361,24 +375,28 @@ class Burbnbot:
             sleep(2)
             self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
             sleep(2)
-            following_count = int(self.driver.find_element_by_xpath(
-                xpath="//*[@resource-id='com.instagram.android:id/row_profile_header_textview_following_count']").text)
-            self.driver.find_element_by_xpath(xpath=elxpath.row_profile_header_container_following).click()
-            self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                    "fixed_tabbar_tabs_container']//*[@text='PEOPLE']").click()
+
+            self.driver.find_element_by_xpath(xpath=elxpath.row_profile_following).click()
+            sleep(2)
+
             follow_list_username = "//*[@resource-id='com.instagram.android:id/follow_list_username']"
-            while len(users) < following_count - 1:
+            t = 0
+            breakpoint()
+            while t < 3:
                 users = users + [i.text for i in self.driver.find_elements_by_xpath(xpath=follow_list_username)]
                 users = list(dict.fromkeys(users))
                 self.scrooll_up()
+                if users[-1] == self.driver.find_element_by_xpath(xpath="({})[last()]".format(follow_list_username)).text:
+                    t += 1
+                else:
+                    t = 0
+            breakpoint()
             return users
         except Exception as err:
             self.treat_exception(err)
 
     def dont_follow_back(self) -> list:
-        list_followers = self.get_followers()
-        list_following = self.get_following()
-        return [i for i in list_following if not list_followers]
+        return [i for i in self.get_following() if not self.get_followers()]
 
     def open_collection(self, collection: str = "All Posts") -> bool:
         try:
@@ -411,6 +429,9 @@ class Burbnbot:
         except Exception as err:
             self.treat_exception(err)
             return False
+
+    def get_white_list(self) -> list:
+        return [i for i in self.dont_follow_back() if not self.get_users_from_collection()]
 
     def get_users_from_collection(self, collection: str = "All Posts") -> list:
         try:
@@ -464,7 +485,7 @@ class Burbnbot:
             self.driver.find_element_by_xpath(xpath=tab_btn_elem).click()
             self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
                                                     "action_bar_search_edit_text']").send_keys(query)
-            self.driver.back()
+            self.driver.hide_keyboard()
             row_result = "//*[@resource-id='com.instagram.android:id/row_search_user_username']"
             if tab == "TOP":
                 row_result = "//*[@resource-id='com.instagram.android:id/row_search_user_username']"
@@ -472,13 +493,14 @@ class Burbnbot:
                 row_result = "//*[@resource-id='com.instagram.android:id/row_hashtag_textview_tag_name']"
             if tab == "PLACES":
                 row_result = "//*[@resource-id='com.instagram.android:id/row_place_title']"
-
-            while True:
-                users = users + [i.text for i in self.driver.find_elements_by_xpath(xpath=row_result)]
-                self.scrooll_up()
-                users = list(dict.fromkeys(users))
-                if len(users) >= amount:
-                    return users[0:amount]
+            if self.check_element_exist(row_result):
+                while True:
+                    users = users + [i.text for i in self.driver.find_elements_by_xpath(xpath=row_result)]
+                    self.scrooll_up()
+                    users = list(dict.fromkeys(users))
+                    if len(users) >= amount:
+                        return users[0:amount]
+            return users
         except Exception as err:
             self.treat_exception(err)
 
@@ -522,7 +544,7 @@ class Burbnbot:
         except Exception as err:
             self.treat_exception(err)
 
-    def get_last_medias(self, username: str, amount: int = 25) -> list:
+    def get_last_medias(self, username: str, amount: int = 25, avoid_liked: bool = True) -> list:
         try:
             medias = []
             self.driver.close_app()
@@ -541,6 +563,12 @@ class Burbnbot:
                                                                 "/feed_more_button_stub']").click()
                         sleep(1)
                         self.driver.find_element_by_xpath(xpath="//*[@text='Copy Link']").click()
+                        if avoid_liked:
+                            self.driver.get(self.driver.get_clipboard_text().split("?")[0])
+                            if self.driver.find_element_by_xpath(elxpath.row_feed_button_like).tag_name == 'Liked':
+                                self.driver.back()
+                                i += 1
+                                continue
                         medias.append(self.driver.get_clipboard_text().split("/")[4])
                         self.driver.back()
                         i += 1
@@ -552,6 +580,29 @@ class Burbnbot:
         except Exception as err:
             self.treat_exception(err)
 
+    def like_feed(self, amount) -> None:
+        try:
+            btn_home = "//*[@resource-id='com.instagram.android:id/tab_bar']//*[@content-desc='Home']"
+            self.driver.close_app()
+            sleep(2)
+            self.driver.launch_app()
+            sleep(2)
+            self.driver.find_element_by_xpath(xpath=btn_home).click()
+            sleep(1)
+            self.driver.find_element_by_xpath(xpath=btn_home).click()
+            sleep(1)
+            i = 0
+            xp = "//*[@resource-id='com.instagram.android:id/row_feed_view_group_buttons']//*[@content-desc='Like']"
+            while i < amount:
+                if self.check_element_exist(xp):
+                    for elm in self.driver.find_elements_by_xpath(xp):
+                        elm.click()
+                        i += 1
+                self.scrooll_up()
+            self.logger.info("{} posts liked.".format(i))
+        except Exception as err:
+            self.treat_exception(err)
+
     def scrooll_up(self) -> bool:
         try:
             el1 = self.driver.find_element_by_xpath(elxpath.layout_container_main)
@@ -559,7 +610,7 @@ class Burbnbot:
             start_y = el1.rect["height"] * 0.9
             end_x = el1.rect["width"] / 2
             end_y = el1.rect["height"] * 0.1
-            self.driver.swipe(start_x, start_y, end_x, end_y, duration=random.randint(2500, 4000))
+            self.driver.swipe(start_x, start_y, end_x, end_y, duration=random.randint(1000, 2500))
             return True
         except Exception as err:
             self.treat_exception(err)
@@ -600,6 +651,7 @@ class Burbnbot:
                 sleep(1)
                 self.driver.find_element_by_xpath("//*[@resource-id='com.instagram.android:id/"
                                                   "create_collection_edit_text']").send_keys(collection)
+                self.driver.hide_keyboard()
                 self.driver.find_element_by_xpath("//*[@resource-id='com.instagram.android:id/"
                                                   "save_to_collection_action_button']").click()
                 sleep(2)
@@ -609,7 +661,6 @@ class Burbnbot:
 
     def delete_collection(self, collection: str) -> None:
         try:
-            breakpoint()
             self.open_collection(collection)
         except Exception as err:
             self.treat_exception(err)

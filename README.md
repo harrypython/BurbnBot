@@ -12,5 +12,7 @@
 BurbnBot is a bot for automated interaction in a famous social media app using Android Virtual Devices.
 
 I'm sorry for the lack of documentation.
+
 This is a project under development.
+
  ¯\_(ツ)_/¯

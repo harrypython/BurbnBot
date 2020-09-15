@@ -10,6 +10,6 @@ class elxpath(object):
     btn_Following = "//*[@resource-id='com.instagram.android:id/profile_header_actions_top_row']//*[@text='Following']"
 
     tab_bar_profile = "//*[@resource-id='com.instagram.android:id/profile_tab']"
-    row_profile_header_container_following = "//*[@resource-id='com.instagram.android:id/row_profile_header_container_following']"
+    row_profile_following = "//*[@resource-id='com.instagram.android:id/row_profile_header_following_container']"
     row_feed_button_like = "//*[@resource-id='com.instagram.android:id/row_feed_button_like']"
     layout_container_main = "//*[@resource-id='com.instagram.android:id/layout_container_main']"
