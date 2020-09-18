@@ -1,5 +1,6 @@
 class elxpath(object):
     tab_bar_home = "//*[@resource-id='com.instagram.android:id/tab_bar']//*[@content-desc='Home']"
+    tab_bar_lupe = "//*[@resource-id='com.instagram.android:id/tab_bar']//*[@content-desc='Search and Explore']"
     login_username = "//*[@resource-id='com.instagram.android:id/login_username']"
     login_password = "//*[@resource-id='com.instagram.android:id/password']"
     btn_log_in = "//*[@resource-id='com.instagram.android:id/button_text']"

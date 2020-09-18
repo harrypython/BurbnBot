@@ -1,14 +1,12 @@
+import argparse
 import random
 import re
 import datetime
+import sys
 from time import sleep
-from appium import webdriver
-from appium.webdriver.common.touch_action import TouchAction
-from appium.webdriver.appium_service import AppiumService
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from .ElementXpath import elxpath
-from os.path import expanduser
 from loguru import logger
+import uiautomator2 as u2
 
 
 class UserNotFound(Exception):
@@ -22,645 +20,153 @@ class MediaType(object):
 
 
 class Burbnbot:
-    service = AppiumService()
-    driver: webdriver = None
+    session = None
     appium_env = {}
     logPath: str = "log/"
     logger: logger = logger
+    version_app: str = "158.0.0.30.123"
+    version_android: str = "9"
 
-    def __init__(self, username: str, password: str, avd_name: str = None,
-                 android_home: str = "~/Library/Android/sdk/",
-                 java_home: str = "/Library/Java/JavaVirtualMachines/adoptopenjdk-14.jdk/Contents/Home",
-                 node: str = "/usr/local/bin/node") -> None:
-        self.logger.remove()
-        self.logger.add("log/{}-{}.log".format(datetime.date.today(), username), backtrace=True, diagnose=True,
-                        level="DEBUG")
+    def __init__(self, device: str = None) -> None:
 
-        self.node_path = expanduser(node)
-        self.appium_env = {"ANDROID_HOME": expanduser(android_home), "JAVA_HOME": expanduser(java_home)}
+        parser = argparse.ArgumentParser(add_help=True)
+        parser.add_argument("-d", "--device", type=str, default=None, help="Device serial number", required=False)
+        args = parser.parse_args()
 
-        self.username = username
-        self.password = password
+        device = u2.connect(addr=args.device)
+        self.session = device.session(package_name="com.instagram.android")
+        self.session.app_stop_all()
+        self.session.app_start(package_name="com.instagram.android")
+        self.session.xpath(elxpath.tab_bar_profile).click()
 
-        self.desired_caps = {
-            "appPackage": "com.instagram.android",
-            "isHeadless": "false",
-            "disableWindowAnimation": "true",
-            "appActivity": ".activity.MainTabActivity",
-            "noReset": "true",
-            "platformName": "android",
-            "automationName": "UiAutomator2",
-            "autoGrantPermissions": "true",
-            "newCommandTimeout": "600",
-            "androidDeviceReadyTimeout": "30",
-            "avd": avd_name
-        }
+        self.user = self.session.xpath("//*[@resource-id='com.instagram.android:id/title_view']").get_text()
 
-        try:
-            while not self.service.is_running:
-                self.service.start(env=self.appium_env, node=self.node_path)
+        self.logger.add("log/{}-{}.log".format(datetime.date.today(), self.user),
+                        backtrace=True, diagnose=True, level="DEBUG")
+        self.logger.add(sys.stderr, format="{time:HH:mm:ss} | {level} | {message}", level="DEBUG")
 
-            self.driver = webdriver.Remote(
-                command_executor="http://localhost:4723/wd/hub",
-                desired_capabilities=self.desired_caps
-            )
+        if not self.session.app_info(package_name="com.instagram.android")['versionName'] == self.version_app:
+            self.logger.warning("You are using a different version than the recommended one, "
+                                "this can generate unexpected errors.")
 
-            self.driver.close_app()
-            sleep(2)
-            self.driver.launch_app()
+    def __wait(self, i: int = None):
+        if i is None:
+            i = random.randint(1, 3)
+        self.logger.info("Waiting {} seconds".format(i))
+        sleep(i)
 
-            if self.check_element_exist(xpath="//*[@text='Please log back in.']"):
-                self.driver.find_element_by_xpath(xpath="//*[@text='OK']").click()
-                sleep(2)
+    def __reset_app(self):
+        self.session.app_stop_all()
+        self.__wait()
+        self.session.app_start(package_name="com.instagram.android")
+        self.__wait()
 
-            while len(self.driver.find_elements_by_xpath(xpath=elxpath.tab_bar_home)) != 1:
-                self.try_login()
-
-            self.driver.implicitly_wait(time_to_wait=10)
-        except Exception as err:
-            self.treat_exception(err)
-
-    def check_element_exist(self, xpath: str) -> bool:
-        try:
-            return len(self.driver.find_elements_by_xpath(xpath)) != 0
-        except (NoSuchElementException, TimeoutException):
-            return False
-
-    def try_login(self):
-        try:
-            if self.check_element_exist(xpath=elxpath.login_username) and \
-                    self.check_element_exist(xpath=elxpath.login_password):
-                self.driver.find_element_by_xpath(xpath=elxpath.login_username).send_keys(self.username)
-                self.driver.hide_keyboard()
-                self.driver.find_element_by_xpath(xpath=elxpath.login_password).send_keys(self.password)
-                self.driver.hide_keyboard()
-                self.driver.find_element_by_xpath(xpath=elxpath.btn_log_in).click()
-                sleep(10)
-            return self.check_element_exist(xpath=elxpath.tab_bar_home)
-        except Exception as err:
-            self.treat_exception(err)
-
-    def treat_exception(self, err):
+    def __treat_exception(self, err):
         self.logger.exception(err)
         pass
-        self.driver.close_app()
-        sleep(2)
-        self.driver.launch_app()
-        sleep(5)
+        self.__reset_app()
         return False
+
+    def __scroll_down(self):
+        e = "com.instagram.android:id/refreshable_container"
+        startX = int(self.session(resourceId=e).info['visibleBounds']['right']/2)
+        startY = int(self.session(resourceId=e).info['visibleBounds']['bottom']*0.90)
+        endX = startX
+        endY = int(self.session(resourceId=e).info['visibleBounds']['top'])
+        self.session.swipe(fx=startX, fy=startY, tx=endX, ty=endY)
+
+    def __scroll_element_by_element(self, e):
+        startX = e[-1].info['visibleBounds']['left']
+        startY = e[-1].info['visibleBounds']['top']
+        # endX = e[0].info['visibleBounds']['left']
+        endX = startX
+        endY = e[0].info['visibleBounds']['top']
+        self.session.swipe(fx=startX, fy=startY, tx=endX, ty=endY)
+
+    def __get_type_media(self) -> int:
+        if self.session(resourceId="com.instagram.android:id/carousel_media_group").exists:
+            return MediaType.CAROUSEL
+        if self.session(resourceId="com.instagram.android:id/row_feed_photo_imageview").info['contentDescription'].\
+                startswith("Video by "):
+            return MediaType.VIDEO
+        return MediaType.PHOTO
 
     def open_media(self, media_code: str) -> bool:
         url = "https://www.instagram.com/p/{}/".format(media_code)
-        self.driver.get(url=url)
-        if self.driver.query_app_state('com.android.chrome') in [4]:
-            self.driver.terminate_app('com.android.chrome')
-            return False
-        return self.check_element_exist(xpath=elxpath.post_media_area)
+        self.logger.info("Opening post {}.".format(url))
+        self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+        return self.session.xpath(elxpath.post_media_area).exists
 
     def open_profile(self, username: str) -> bool:
-        self.driver.get(url="https://www.instagram.com/{}/".format(username))
-        if self.driver.query_app_state('com.android.chrome') in [4]:
-            self.driver.terminate_app('com.android.chrome')
-            return False
-        if self.check_element_exist(xpath="//*[@text='User not found']"):
-            return False
-        return self.check_element_exist(xpath=elxpath.row_profile_header_imageview)
+        url = "https://www.instagram.com/{}/".format(username)
+        self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+        return self.session.xpath(elxpath.row_profile_header_imageview).exists
 
-    def open_tag(self, tag: str) -> bool:
-        self.driver.get(url="https://www.instagram.com/explore/tags/{}/".format(tag))
-        if self.driver.query_app_state('com.android.chrome') in [4]:
-            self.driver.terminate_app('com.android.chrome')
-            return False
-        if self.check_element_exist(xpath="//*[@text='User not found']"):
-            return False
-        return self.check_element_exist(xpath=elxpath.row_profile_header_imageview)
+    def open_tag(self, tag: str, aba: str = "Recent") -> bool:
+        url = "https://www.instagram.com/explore/tags/{}/".format(tag)
+        self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+        self.__wait(5)
+        if aba is not None:
+            while not self.session(resourceId="com.instagram.android:id/tab_layout").child_by_text(aba).exists:
+                self.__wait(1)
+            self.session(resourceId="com.instagram.android:id/tab_layout").child_by_text(aba).click()
 
-    def swipe_carousel(self) -> None:
+        return self.session.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists
+
+    def __center(self, element: None = ""):
+        lx, ly, rx, ry = element.bounds()
+        width, height = rx - lx, ry - ly
+        x = lx + width * 0.5
+        y = ly + height * 0.5
+        return x, y
+
+    def __double_click(self, e):
+        x, y = self.__center(element=e)
+        self.session.double_click(x, y, duration=0.1)
+
+    def __like(self):
+        row_feed_button_like = "com.instagram.android:id/row_feed_button_like"
+        media_type = self.__get_type_media()
+        while self.session(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Like':
+            if media_type == MediaType.VIDEO:
+                self.session(resourceId=row_feed_button_like, instance=0).click()
+            else:
+                if media_type == MediaType.CAROUSEL:
+                    self.__swipe_carousel()
+
+            self.__double_click(e=self.session(resourceId="android:id/list").child(className="android.widget.FrameLayout"))
+
+            if self.session(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Like':
+                self.session(resourceId=row_feed_button_like, instance=0).click()
+
+        self.__wait()
+        return self.session(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Liked'
+
+    def like(self):
+        return self.__like()
+
+    def __swipe_carousel(self) -> None:
         try:
-            match = re.search(r"(\d+).*?(\d+)", self.driver.find_element_by_xpath(
-                "//*[@resource-id='com.instagram.android:id/carousel_image']").tag_name)
-            n = int(match.group(2))
-        except NoSuchElementException:
+            n = int(re.search(r"(\d+).*?(\d+)",
+                              self.session(resourceId="com.instagram.android:id/carousel_image")[0]
+                              .info['contentDescription']).group(2))
+        except Exception:
             n = 2  # if don't find the number of pictures work with only 2
             pass
 
         for x in range(n - 1):
-            self.driver.swipe(800, 600, 250, 600, random.randint(500, 1000))
+            self.session(resourceId="com.instagram.android:id/carousel_image")[0].swipe("left")
+            self.__wait()
         for x in range(n - 1):
-            self.driver.swipe(300, 650, 800, 600, random.randint(500, 1000))
+            self.session(resourceId="com.instagram.android:id/carousel_image")[0].swipe("right")
+            self.__wait()
 
-    @staticmethod
-    def wait_random() -> None:
-        t = random.randint(5, 15)
-        sleep(t)
 
-    @staticmethod
-    def get_center_element(element) -> tuple:
-        x = element.location['x'] + (element.size['width'] / 2)
-        y = element.location['y'] + (element.size['height'] / 2)
-        return x, y
 
-    def get_type_media(self) -> int:
-        row_feed_photo_imageview = "//*[@resource-id='com.instagram.android:id/row_feed_photo_imageview']"
-        if self.check_element_exist(xpath="//*[@resource-id='com.instagram.android:id/carousel_media_group']"):
-            return MediaType.CAROUSEL
-        if self.driver.find_element_by_xpath(row_feed_photo_imageview).tag_name.startswith("Video by "):
-            return MediaType.VIDEO
-        return MediaType.PHOTO
 
-    def post_double_tap(self) -> None:
-        e = self.driver.find_element_by_xpath(xpath=elxpath.post_media_area)
-        ex = e.location['x'] + (e.size['width'] / 2)
-        ey = e.location['y'] + (e.size['height'] / 2)
-        ta = TouchAction(self.driver)
-        ta.tap(element=e, x=ex, y=ey, count=2)
-        ta.perform()
 
-    def mute_unmute_user(self, switch: bool) -> bool:
-        try:
-            post_mute = "//*[@resource-id='com.instagram.android:id/posts_mute_setting_row_switch']"
-            stories_mute = "//*[@resource-id='com.instagram.android:id/stories_mute_setting_row_switch']"
-            self.driver.find_element_by_xpath(xpath=elxpath.btn_Following).click()
-            self.driver.find_element_by_xpath("//*[@text='Mute']").click()
-            while not (self.driver.find_element_by_xpath(post_mute).get_attribute("checked") == "true") == switch:
-                self.driver.find_element_by_xpath(post_mute).click()
-            while not (self.driver.find_element_by_xpath(stories_mute).get_attribute("checked") == "true") == switch:
-                self.driver.find_element_by_xpath(stories_mute).click()
-            self.driver.back()
-            self.driver.back()
-            return True
-        except Exception as err:
-            self.treat_exception(err)
-            return False
 
-    def mute_user(self):
-        return self.mute_unmute_user(switch=True)
 
-    def unmute_user(self):
-        return self.mute_unmute_user(switch=False)
 
-    def follow(self, username: str, mute_user: bool = True) -> bool:
-        try:
-            if self.open_profile(username):
-                if self.check_element_exist(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                  "profile_header_actions_top_row']//*[@text='Follow']"):
-                    self.driver.find_element_by_xpath("//*[@resource-id='com.instagram.android:id/"
-                                                      "profile_header_actions_top_row']//*[@text='Follow']").click()
-                    if mute_user:
-                        self.mute_user()
-                    return True
-            return False
-        except Exception as err:
-            self.treat_exception(err)
 
-    def unfollow(self, username: str) -> bool:
-        try:
-            self.driver.close_app()
-            sleep(2)
-            self.driver.launch_app()
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath=elxpath.row_profile_following).click()
-            self.driver.find_element_by_xpath(
-                xpath="//*[@resource-id='com.instagram.android:id/row_search_edit_text']").send_keys(username)
-            self.driver.hide_keyboard()
-            if self.check_element_exist(xpath="//*[@text='No users found.']"):
-                return True
-            xpath_btn_following = "//*[@text='{}']/../../..//*[@text='Following']".format(username)
-            self.driver.find_element_by_xpath(xpath=xpath_btn_following).click()
-            sleep(2)
-            self.driver.find_element_by_xpath("//*[@resource-id='com.instagram.android:id/button_positive']").click()
-            sleep(2)
-            return self.check_element_exist(xpath="//*[@text='{}']/../..//*[@text='Follow']".format(username))
-        except Exception as err:
-            self.treat_exception(err)
 
-    def friendship(self) -> bool:
-        try:
-            return self.check_element_exist(xpath=elxpath.btn_Following)
-        except Exception as err:
-            self.treat_exception(err)
-            return False
-
-    def like(self, media_code: str) -> bool:
-        try:
-            if self.open_media(media_code):
-                if self.driver.find_element_by_xpath(xpath=elxpath.row_feed_button_like).tag_name == 'Liked' or \
-                        not self.check_element_exist(xpath=elxpath.row_feed_button_like):
-                    return False
-                else:
-                    media_type = self.get_type_media()
-                    if media_type == MediaType.VIDEO:
-                        self.wait_random()
-                        self.driver.find_element_by_xpath(elxpath.row_feed_button_like).click()
-                    else:
-                        if media_type == MediaType.CAROUSEL:
-                            self.swipe_carousel()
-                        self.post_double_tap()
-
-                        if not self.driver.find_element_by_xpath(elxpath.row_feed_button_like).tag_name == 'Liked':
-                            self.driver.find_element_by_xpath(elxpath.row_feed_button_like).click()
-            else:
-                return False
-            return self.driver.find_element_by_xpath(elxpath.row_feed_button_like).tag_name == 'Liked'
-        except Exception as err:
-            self.treat_exception(err)
-
-    def chimping_stories(self, amount: int = random.randint(2, 5)) -> bool:
-        try:
-            self.driver.close_app()
-            sleep(3)
-            self.driver.launch_app()
-            count = 0
-
-            stories_thumbnails = self.driver.find_elements_by_xpath("//*[@resource-id='com.instagram.android:id/"
-                                                                    "outer_container']")
-            stories_thumbnails[1].click()
-            while count < amount:
-                t = random.randint(2, 5)
-                sleep(t)
-                if self.check_element_exist("//*[@resource-id='com.instagram.android:id/reel_viewer_texture_view']"):
-                    x1 = random.randint(750, 850)
-                    y1 = random.randint(550, 650)
-                    x2 = random.randint(200, 300)
-                    y2 = random.randint(550, 650)
-                    self.driver.swipe(x1, y1, x2, y2, random.randint(500, 1000))
-                count += 1
-
-            self.driver.close_app()
-            sleep(3)
-            self.driver.launch_app()
-
-            return True
-        except Exception as err:
-            self.treat_exception(err)
-
-    def chimping_timeline(self, amount: int = random.randint(5, 30)) -> bool:
-        try:
-            self.driver.close_app()
-            sleep(3)
-            self.driver.launch_app()
-            sleep(1)
-
-            el1 = self.driver.find_element_by_xpath(elxpath.layout_container_main)
-            start_x = el1.rect["width"] / 2
-            start_y = el1.rect["height"] * 0.9
-            end_x = el1.rect["width"] / 2
-            end_y = el1.rect["height"] * 0.1
-
-            count = 0
-            while count < amount:
-                self.driver.swipe(start_x, start_y, end_x, end_y, duration=random.randint(2500, 4000))
-                count += 1
-
-            self.driver.close_app()
-            sleep(3)
-            self.driver.launch_app()
-            return True
-        except Exception as err:
-            self.treat_exception(err)
-
-    def take_coffee(self, t: int = random.randint(1, 3) * 60) -> bool:
-        try:
-            self.driver.close_app()
-            sleep(t)
-            self.driver.launch_app()
-            return True
-        except Exception as err:
-            self.treat_exception(err)
-
-    def get_followers(self) -> list:
-        try:
-            users = []
-            self.driver.close_app()
-            sleep(2)
-            self.driver.launch_app()
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                    "row_profile_header_followers_container']").click()
-            follow_list_username = "//*[@resource-id='com.instagram.android:id/follow_list_username']"
-            t = 0
-            while t < 3:
-                users = users + [i.text for i in self.driver.find_elements_by_xpath(xpath=follow_list_username)]
-                users = list(dict.fromkeys(users))
-                self.scrooll_up()
-                if users[-1] == self.driver.find_element_by_xpath(xpath="({})[last()]".format(follow_list_username)).text:
-                    t += 1
-                else:
-                    t = 0
-            breakpoint()
-            return users
-        except Exception as err:
-            self.treat_exception(err)
-
-    def str2int(self, text: str) -> int:
-        num_map = {'K': 1000, 'M': 1000000, 'B': 1000000000}
-        v = text.replace(",", "").replace(".", "").upper()
-        if v[-1] in num_map:
-            v = int(v[:-1]) * num_map.get(v[-1])
-        return int(v)
-
-    def get_following(self) -> list:
-        try:
-            users = []
-            self.driver.close_app()
-            sleep(2)
-            self.driver.launch_app()
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-
-            self.driver.find_element_by_xpath(xpath=elxpath.row_profile_following).click()
-            sleep(2)
-
-            follow_list_username = "//*[@resource-id='com.instagram.android:id/follow_list_username']"
-            t = 0
-            breakpoint()
-            while t < 3:
-                users = users + [i.text for i in self.driver.find_elements_by_xpath(xpath=follow_list_username)]
-                users = list(dict.fromkeys(users))
-                self.scrooll_up()
-                if users[-1] == self.driver.find_element_by_xpath(xpath="({})[last()]".format(follow_list_username)).text:
-                    t += 1
-                else:
-                    t = 0
-            breakpoint()
-            return users
-        except Exception as err:
-            self.treat_exception(err)
-
-    def dont_follow_back(self) -> list:
-        return [i for i in self.get_following() if not self.get_followers()]
-
-    def open_collection(self, collection: str = "All Posts") -> bool:
-        try:
-            xp_collection = "//*[@text='{}']".format(collection)
-            self.driver.close_app()
-            sleep(1)
-            self.driver.launch_app()
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath=elxpath.tab_bar_profile).click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/action_bar']"
-                                                    "//*[@content-desc='Options']").click()
-            sleep(1)
-            self.driver.find_element_by_xpath(xpath="//*[@text='Saved']").click()
-            t = 0
-            while not self.check_element_exist(xpath=xp_collection):
-                last_item = self.driver.find_elements_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                                     "saved_collection_name']")[-1].text
-                self.scrooll_up()
-                if last_item == self.driver.find_elements_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                                         "saved_collection_name']")[-1].text:
-                    t += 1
-                if t >= 5:
-                    self.logger.info("Collection {} not found.".format(collection))
-                    return False
-
-            self.driver.find_element_by_xpath(xpath=xp_collection).click()
-            return True
-        except Exception as err:
-            self.treat_exception(err)
-            return False
-
-    def get_white_list(self) -> list:
-        return [i for i in self.dont_follow_back() if not self.get_users_from_collection()]
-
-    def get_users_from_collection(self, collection: str = "All Posts") -> list:
-        try:
-            row_feed_photo_profile_name = "//*[@resource-id='com.instagram.android:id/row_feed_photo_profile_name']"
-            users = []
-            if self.open_collection(collection=collection):
-                xp = "//*[@resource-id='com.instagram.android:id/recycler_view']" \
-                     "//*[@resource-id='com.instagram.android:id/image_button']"
-                self.driver.find_element_by_xpath(xpath=xp).click()
-                t = 0
-
-                while t < 3:
-                    users = users + [i.text.split()[0] for i in
-                                     self.driver.find_elements_by_xpath(row_feed_photo_profile_name)]
-                    self.scrooll_up()
-                    while not self.check_element_exist(row_feed_photo_profile_name):
-                        self.scrooll_up()
-                    if users[-1] == self.driver.find_elements_by_xpath(row_feed_photo_profile_name)[-1].text.split()[0]:
-                        t += 1
-                    else:
-                        t = 0
-
-            return list(dict.fromkeys(users))
-        except Exception as err:
-            self.treat_exception(err)
-
-    def search_accounts(self, query: str, amount: int = 10):
-        return self.__search(query, amount, tab="ACCOUNTS")
-
-    def search_top(self, query: str, amount: int = 10):
-        return self.__search(query, amount, tab="TOP")
-
-    def search_tags(self, query: str, amount: int = 10):
-        return self.__search(query, amount, tab="TAGS")
-
-    def search_places(self, query: str, amount: int = 10):
-        return self.__search(query, amount, tab="PLACES")
-
-    def __search(self, query: str, amount: int = 10, tab: str = "ACCOUNTS") -> list:
-        try:
-            users = []
-            self.driver.close_app()
-            sleep(2)
-            self.driver.launch_app()
-            self.driver.find_element_by_xpath(xpath="//*[@content-desc='Search and Explore']").click()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                    "action_bar_search_edit_text']").click()
-            tab_btn_elem = "//*[@resource-id='com.instagram.android:id/fixed_tabbar_tabs_container']" \
-                           "//*[@class='android.widget.FrameLayout']//*[@text='{}']".format(tab)
-            self.driver.find_element_by_xpath(xpath=tab_btn_elem).click()
-            self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                    "action_bar_search_edit_text']").send_keys(query)
-            self.driver.hide_keyboard()
-            row_result = "//*[@resource-id='com.instagram.android:id/row_search_user_username']"
-            if tab == "TOP":
-                row_result = "//*[@resource-id='com.instagram.android:id/row_search_user_username']"
-            if tab == "TAGS":
-                row_result = "//*[@resource-id='com.instagram.android:id/row_hashtag_textview_tag_name']"
-            if tab == "PLACES":
-                row_result = "//*[@resource-id='com.instagram.android:id/row_place_title']"
-            if self.check_element_exist(row_result):
-                while True:
-                    users = users + [i.text for i in self.driver.find_elements_by_xpath(xpath=row_result)]
-                    self.scrooll_up()
-                    users = list(dict.fromkeys(users))
-                    if len(users) >= amount:
-                        return users[0:amount]
-            return users
-        except Exception as err:
-            self.treat_exception(err)
-
-    def like_last_medias(self, username: str, amount: int = 1) -> bool:
-        try:
-            profile_image_view = "(//*[@resource-id='android:id/list']//*[@class='android.widget.ImageView'])[{}]"
-            liked = 0
-            if self.open_profile(username=username):
-                self.driver.find_element_by_xpath(
-                    xpath="//*[@resource-id='com.instagram.android:id/row_profile_header_container_photos']").click()
-                i = 1
-                while liked < amount:
-                    if self.check_element_exist(xpath=profile_image_view.format(i)):
-                        self.driver.find_element_by_xpath(xpath=profile_image_view.format(i)).click()
-                        if self.driver.find_element_by_xpath(
-                                xpath=elxpath.row_feed_button_like).tag_name == 'Liked' or \
-                                not self.check_element_exist(xpath=elxpath.row_feed_button_like):
-                            self.logger.warning("Image already liked.")
-                            self.driver.back()
-                            i += 1
-                            continue
-                        else:
-                            media_type = self.get_type_media()
-                            if media_type == MediaType.VIDEO:
-                                self.wait_random()
-                                self.driver.find_element_by_xpath(elxpath.row_feed_button_like).click()
-                            else:
-                                if media_type == MediaType.CAROUSEL:
-                                    self.swipe_carousel()
-                                self.post_double_tap()
-
-                                if not self.driver.find_element_by_xpath(
-                                        elxpath.row_feed_button_like).tag_name == 'Liked':
-                                    self.driver.find_element_by_xpath(elxpath.row_feed_button_like).click()
-
-                        if self.driver.find_element_by_xpath(elxpath.row_feed_button_like).tag_name == 'Liked':
-                            i += 1
-                            liked += 1
-                            self.driver.back()
-            return True
-        except Exception as err:
-            self.treat_exception(err)
-
-    def get_last_medias(self, username: str, amount: int = 25, avoid_liked: bool = True) -> list:
-        try:
-            medias = []
-            self.driver.close_app()
-            sleep(2)
-            self.driver.launch_app()
-            if self.open_profile(username=username):
-                self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id/"
-                                                        "row_profile_header_post_count_container']").click()
-                i = 1
-                while len(medias) < amount:
-                    image_view = "(//*[@resource-id='android:id/list']" \
-                                 "//*[@class='android.widget.ImageView'])[{}]".format(i)
-                    if self.check_element_exist(xpath=image_view):
-                        self.driver.find_element_by_xpath(xpath=image_view).click()
-                        self.driver.find_element_by_xpath(xpath="//*[@resource-id='com.instagram.android:id"
-                                                                "/feed_more_button_stub']").click()
-                        sleep(1)
-                        self.driver.find_element_by_xpath(xpath="//*[@text='Copy Link']").click()
-                        if avoid_liked:
-                            self.driver.get(self.driver.get_clipboard_text().split("?")[0])
-                            if self.driver.find_element_by_xpath(elxpath.row_feed_button_like).tag_name == 'Liked':
-                                self.driver.back()
-                                i += 1
-                                continue
-                        medias.append(self.driver.get_clipboard_text().split("/")[4])
-                        self.driver.back()
-                        i += 1
-                    else:
-                        self.scrooll_up()
-                        i = 1
-                    medias = list(dict.fromkeys(medias))
-            return medias[0:amount]
-        except Exception as err:
-            self.treat_exception(err)
-
-    def like_feed(self, amount) -> None:
-        try:
-            btn_home = "//*[@resource-id='com.instagram.android:id/tab_bar']//*[@content-desc='Home']"
-            self.driver.close_app()
-            sleep(2)
-            self.driver.launch_app()
-            sleep(2)
-            self.driver.find_element_by_xpath(xpath=btn_home).click()
-            sleep(1)
-            self.driver.find_element_by_xpath(xpath=btn_home).click()
-            sleep(1)
-            i = 0
-            xp = "//*[@resource-id='com.instagram.android:id/row_feed_view_group_buttons']//*[@content-desc='Like']"
-            while i < amount:
-                if self.check_element_exist(xp):
-                    for elm in self.driver.find_elements_by_xpath(xp):
-                        elm.click()
-                        i += 1
-                self.scrooll_up()
-            self.logger.info("{} posts liked.".format(i))
-        except Exception as err:
-            self.treat_exception(err)
-
-    def scrooll_up(self) -> bool:
-        try:
-            el1 = self.driver.find_element_by_xpath(elxpath.layout_container_main)
-            start_x = el1.rect["width"] / 2
-            start_y = el1.rect["height"] * 0.9
-            end_x = el1.rect["width"] / 2
-            end_y = el1.rect["height"] * 0.1
-            self.driver.swipe(start_x, start_y, end_x, end_y, duration=random.randint(1000, 2500))
-            return True
-        except Exception as err:
-            self.treat_exception(err)
-
-    def save_in_collection(self, media: str, collection: str = datetime.datetime.now().strftime("%Y%m%d")) -> bool:
-        try:
-            row_feed_button_save = "//*[@resource-id='com.instagram.android:id/row_feed_button_save']"
-            if self.open_media(media_code=media):
-                while not self.check_element_exist(xpath=row_feed_button_save):
-                    self.scrooll_up()
-                actions = TouchAction(self.driver)
-                actions.long_press(self.driver.find_element_by_xpath(xpath=row_feed_button_save))
-                actions.perform()
-                xp = "//*[@resource-id='com.instagram.android:id/save_to_collections_recycler_view']" \
-                     "//*[@text='{}']".format(collection)
-                thumbnails = "//*[@resource-id='com.instagram.android:id/selectable_image']"
-                t = 0
-                while t < 2:
-                    if not self.check_element_exist(xpath=xp):
-                        last_elem = self.driver.find_element_by_xpath("(//*[@resource-id='com.instagram.android:id/"
-                                                                      "collection_name'])[last()]").text
-                        end_x, end_y = self.get_center_element(
-                            self.driver.find_element_by_xpath("({})[1]".format(thumbnails)))
-                        start_x, start_y = self.get_center_element(
-                            self.driver.find_element_by_xpath("({})[last()]".format(thumbnails)))
-                        self.driver.swipe(start_x, start_y, end_x, end_y, duration=random.randint(2500, 4000))
-                        if last_elem == self.driver.find_element_by_xpath("(//*[@resource-id='com.instagram.android:id/"
-                                                                          "collection_name'])[last()]").text:
-                            t += 1
-                        else:
-                            t = 0
-                    else:
-                        self.driver.find_element_by_xpath(xp).click()
-                        return True
-                self.logger.info("Collection not found, creating now.")
-                self.driver.find_element_by_xpath("//*[@resource-id='com.instagram.android:id/"
-                                                  "save_to_collection_new_collection_button']").click()
-                sleep(1)
-                self.driver.find_element_by_xpath("//*[@resource-id='com.instagram.android:id/"
-                                                  "create_collection_edit_text']").send_keys(collection)
-                self.driver.hide_keyboard()
-                self.driver.find_element_by_xpath("//*[@resource-id='com.instagram.android:id/"
-                                                  "save_to_collection_action_button']").click()
-                sleep(2)
-                return True
-        except Exception as err:
-            self.treat_exception(err)
-
-    def delete_collection(self, collection: str) -> None:
-        try:
-            self.open_collection(collection)
-        except Exception as err:
-            self.treat_exception(err)
