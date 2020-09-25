@@ -1,3 +1,2 @@
-Appium-Python-Client
-selenium
 loguru
+git+https://github.com/openatx/uiautomator2@2.11.4

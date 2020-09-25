@@ -39,11 +39,10 @@ class Burbnbot:
         self.session.app_start(package_name="com.instagram.android")
         self.session.xpath(elxpath.tab_bar_profile).click()
 
-        self.user = self.session.xpath("//*[@resource-id='com.instagram.android:id/title_view']").get_text()
+        self.user = self.session.xpath("//*[@resource-id='com.instagram.android:id/title_view']").info['text']
 
         self.logger.add("log/{}-{}.log".format(datetime.date.today(), self.user),
                         backtrace=True, diagnose=True, level="DEBUG")
-        self.logger.add(sys.stderr, format="{time:HH:mm:ss} | {level} | {message}", level="DEBUG")
 
         if not self.session.app_info(package_name="com.instagram.android")['versionName'] == self.version_app:
             self.logger.warning("You are using a different version than the recommended one, "
@@ -52,7 +51,7 @@ class Burbnbot:
     def __wait(self, i: int = None):
         if i is None:
             i = random.randint(1, 3)
-        self.logger.info("Waiting {} seconds".format(i))
+        # self.logger.info("Waiting {} seconds".format(i))
         sleep(i)
 
     def __reset_app(self):
@@ -76,12 +75,13 @@ class Burbnbot:
         self.session.swipe(fx=startX, fy=startY, tx=endX, ty=endY)
 
     def __scroll_element_by_element(self, e):
-        startX = e[-1].info['visibleBounds']['left']
-        startY = e[-1].info['visibleBounds']['top']
-        # endX = e[0].info['visibleBounds']['left']
-        endX = startX
-        endY = e[0].info['visibleBounds']['top']
-        self.session.swipe(fx=startX, fy=startY, tx=endX, ty=endY)
+        if e.count > 2:
+            fx = e[-1].info['visibleBounds']['right']/2
+            fy = e[-1].info['visibleBounds']['top']
+            # tx = e[0].info['visibleBounds']['left']
+            tx = fx
+            ty = e[0].info['visibleBounds']['bottom']
+            self.session.swipe(fx, fy, tx, ty, duration=0)
 
     def __get_type_media(self) -> int:
         if self.session(resourceId="com.instagram.android:id/carousel_media_group").exists:
@@ -160,6 +160,33 @@ class Burbnbot:
         for x in range(n - 1):
             self.session(resourceId="com.instagram.android:id/carousel_image")[0].swipe("right")
             self.__wait()
+
+    def get_following_list(self):
+        list_following = []
+        breakpoint()
+        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+        self.session(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
+        self.__wait()
+        while not self.session(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
+            self.session(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
+            self.__wait()
+        self.session(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
+        self.__wait()
+        t = 0
+        while t < 3 and self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
+            list_following = list_following + [elem.get_text(timeout=50) for elem in self.session(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+
+            self.__scroll_element_by_element(self.session(resourceId="com.instagram.android:id/follow_list_container"))
+
+            if list_following[-1] == self.session(resourceId="com.instagram.android:id/follow_list_username").get_text(timeout=50):
+                t += 1
+            else:
+                t = 0
+            self.session(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
+        list_following = list(dict.fromkeys(list_following))
+        breakpoint()
+        return list_following
 
 
 
