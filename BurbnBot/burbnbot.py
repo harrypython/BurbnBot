@@ -163,7 +163,6 @@ class Burbnbot:
 
     def get_following_list(self):
         list_following = []
-        breakpoint()
         self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
         self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
         self.session(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
@@ -185,7 +184,26 @@ class Burbnbot:
                 t = 0
             self.session(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
         list_following = list(dict.fromkeys(list_following))
-        breakpoint()
+        return list_following
+
+    def get_followers_list(self):
+        list_following = []
+        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+        self.session(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
+        self.__wait()
+        t = 0
+        while t < 3 and self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
+            list_following = list_following + [elem.get_text(timeout=50) for elem in self.session(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+
+            self.__scroll_element_by_element(self.session(resourceId="com.instagram.android:id/follow_list_container"))
+
+            if list_following[-1] == self.session(resourceId="com.instagram.android:id/follow_list_username").get_text(timeout=50):
+                t += 1
+            else:
+                t = 0
+            self.session(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
+        list_following = list(dict.fromkeys(list_following))
         return list_following
 
 
