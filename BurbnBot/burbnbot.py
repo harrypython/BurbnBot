@@ -5,7 +5,10 @@ import datetime
 from time import sleep
 from .ElementXpath import elxpath
 from loguru import logger
+from huepy import *
+from progress.counter import Counter
 import uiautomator2 as u2
+
 
 class MediaType(object):
     PHOTO = 1
@@ -31,6 +34,9 @@ class Burbnbot:
         args = parser.parse_args()
 
         device = u2.connect(addr=args.device)
+        if len(device.app_list("com.instagram.android")) == 0:
+            print(bad("Instagram not installed."))
+            quit()
         self.session = device.session(package_name="com.instagram.android")
         self.session.app_stop_all()
         self.session.app_start(package_name="com.instagram.android")
@@ -42,8 +48,8 @@ class Burbnbot:
                         backtrace=True, diagnose=True, level="DEBUG")
 
         if not self.session.app_info(package_name="com.instagram.android")['versionName'] == self.version_app:
-            self.logger.warning("You are using a different version than the recommended one, "
-                                "this can generate unexpected errors.")
+            print(info(
+                "You are using a different version than the recommended one, this can generate unexpected errors."))
 
     def __wait(self, i: int = None):
         """Wait the device :param i: number of seconds to wait, if None will be
@@ -54,10 +60,11 @@ class Burbnbot:
         """
         if i is None:
             i = random.randint(1, 3)
-        # self.logger.info("Waiting {} seconds".format(i))
+        # print(good("Waiting {} seconds".format(i)))
         sleep(i)
 
     def __reset_app(self):
+        print(good("Restarting app"))
         self.session.app_stop_all()
         self.__wait()
         self.session.app_start(package_name="com.instagram.android")
@@ -72,6 +79,15 @@ class Burbnbot:
         pass
         self.__reset_app()
         return False
+
+    def __str_to_number(self, n: str):
+        n = n.strip().replace(",", "")
+        num_map = {'K': 1000, 'M': 1000000, 'B': 1000000000}
+        if n.isdigit():
+            return n
+        else:
+            n = float(n[:-1]) * num_map.get(n[-1].upper(), 1)
+        return int(n)
 
     def __scroll_down(self):
         e = "com.instagram.android:id/refreshable_container"
@@ -115,7 +131,7 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         url = "https://www.instagram.com/p/{}/".format(media_code)
-        self.logger.info("Opening post {}.".format(url))
+        print(good("Opening post {}.".format(url)))
         self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
         return self.session.xpath(elxpath.post_media_area).exists
 
@@ -129,6 +145,7 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         url = "https://www.instagram.com/{}/".format(username)
+        print(good("Opening profile {}.".format(url)))
         self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
         return self.session.xpath(elxpath.row_profile_header_imageview).exists
 
@@ -215,9 +232,13 @@ class Burbnbot:
             self.__wait()
 
     def get_following_list(self):
-        list_following = []
+        self.__reset_app()
         self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
         self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+        print(good("Opening following list"))
+        following_count = self.__str_to_number(
+            self.session(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
+        print(good("{} followings".format(following_count)))
         self.session(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
         self.__wait()
         while not self.session(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
@@ -225,45 +246,56 @@ class Burbnbot:
             self.__wait()
         self.session(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
         self.__wait()
-        t = 0
-        while t < 3 and self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
-            list_following = list_following + [elem.get_text(timeout=50) for elem in
-                                               self.session(resourceId="com.instagram.android:id/follow_list_username")
-                                               if elem.exists]
-
-            self.__scroll_element_by_element(self.session(resourceId="com.instagram.android:id/follow_list_container"))
-
-            if list_following[-1] == self.session(resourceId="com.instagram.android:id/follow_list_username").get_text(
-                    timeout=50):
-                t += 1
-            else:
-                t = 0
-            self.session(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
-        list_following = list(dict.fromkeys(list_following))
-        return list_following
+        if self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
+            list_following = []
+            t = 0
+            c = Counter("Following: ")
+            while True:
+                c.index = len(list(dict.fromkeys(list_following)))
+                c.update()
+                try:
+                    list_following = list_following + [elem.get_text() for elem in self.session(
+                        resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                    if not self.session(text="Suggestions for you").exists:
+                        self.__scroll_element_by_element(self.session(resourceId="com.instagram.android:id/follow_list_container"))
+                    else:
+                        break
+                except:
+                    pass
+            c.finish()
+        return list(dict.fromkeys(list_following))
 
     def get_followers_list(self):
-        list_following = []
+        self.__reset_app()
         self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
         self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+        print(good("Opening followers list"))
+        followers_count = self.__str_to_number(
+            self.session(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
+        print(good("{} followers".format(followers_count)))
         self.session(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
         self.__wait()
-        t = 0
-        while t < 3 and self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
-            list_following = list_following + [elem.get_text(timeout=50) for elem in
-                                               self.session(resourceId="com.instagram.android:id/follow_list_username")
-                                               if elem.exists]
-
-            self.__scroll_element_by_element(self.session(resourceId="com.instagram.android:id/follow_list_container"))
-
-            if list_following[-1] == self.session(resourceId="com.instagram.android:id/follow_list_username").get_text(
-                    timeout=50):
-                t += 1
-            else:
-                t = 0
-            self.session(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
-        list_following = list(dict.fromkeys(list_following))
-        return list_following
+        if self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
+            list_following = []
+            t = 0
+            c = Counter("Following: ")
+            while t < 5:
+                c.index = len(list(dict.fromkeys(list_following)))
+                c.update()
+                try:
+                    list_following = list_following + [elem.get_text() for elem in self.session(
+                        resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                    self.__scroll_element_by_element(
+                        self.session(resourceId="com.instagram.android:id/follow_list_container"))
+                    if list_following[-1] == self.session(resourceId="com.instagram.android:id/follow_list_username").get_text():
+                        t += 1
+                    else:
+                        t = 0
+                    self.session(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
+                except:
+                    pass
+            c.finish()
+        return list(dict.fromkeys(list_following))
 
     def unfollow(self, username: str):
         self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
@@ -272,8 +304,11 @@ class Burbnbot:
         self.__wait()
         self.session(resourceId="com.instagram.android:id/row_search_edit_text").send_keys(username)
         self.__wait()
-        if self.session(resourceId="com.instagram.android:id/button").get_text() == 'Following':
-            self.session(resourceId="com.instagram.android:id/button").click(timeout=5)
+        if self.session(resourceId="com.instagram.android:id/button").count == 1:
+            if self.session(resourceId="com.instagram.android:id/button").get_text() == 'Following':
+                self.session(resourceId="com.instagram.android:id/button").click(timeout=5)
+        else:
+            return False
         return self.session(resourceId="com.instagram.android:id/button").get_text() == 'Follow'
 
     def follow(self, username: str):
@@ -281,4 +316,3 @@ class Burbnbot:
             if self.session(resourceId="com.instagram.android:id/button").get_text() == 'Follow':
                 self.session(resourceId="com.instagram.android:id/button").click()
         return self.session(resourceId="com.instagram.android:id/button").get_text() == 'Following'
-
