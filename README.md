@@ -9,10 +9,36 @@
 > [Instagram Was First Called 'Burbn'.](https://www.theatlantic.com/technology/archive/2014/07/instagram-used-to-be-called-brbn/373815/)
 
 # BurbnBot
-BurbnBot is a bot for automated interaction in a famous social media app using Android Virtual Devices.
 
-I'm sorry for the lack of documentation.
+BurbnBot is a bot for automated interaction in a famous social media app using a Android device or an Android Virtual Devices.
+## Installation
 
-This is a project under development.
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
 
- ¯\_(ツ)_/¯
+```bash
+pip install foobar
+```
+
+
+## Usage
+
+```python
+import foobar
+
+foobar.pluralize('word') # returns 'words'
+foobar.pluralize('goose') # returns 'geese'
+foobar.singularize('phenomena') # returns 'phenomenon'
+```
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+## License
+
+[ GNU GPLv3 ](https://choosealicense.com/licenses/gpl-3.0/)
+
+## Buy me a coffee
+
+<a href="https://www.buymeacoffee.com/harrypython" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" style="height: 37px !important;" ></a>

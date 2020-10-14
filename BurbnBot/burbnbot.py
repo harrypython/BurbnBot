@@ -3,7 +3,6 @@ import random
 import re
 import datetime
 from time import sleep
-from .ElementXpath import elxpath
 from loguru import logger
 from huepy import *
 from progress.counter import Counter
@@ -11,15 +10,16 @@ import uiautomator2 as u2
 
 
 class MediaType(object):
-    PHOTO = 1
-    VIDEO = 2
-    CAROUSEL = 8
+    """Type of medias on Instagram"""
+    PHOTO: int = 1  #: Photo media type
+    VIDEO: int = 2  #: Video media type
+    CAROUSEL: int = 8  #: A album with photos and/or videos
 
 
 class Burbnbot:
-    session = None
+    device: u2.Device
     logPath: str = "log/"
-    logger: logger = logger
+    logger: logger = logger  #: Logger
     version_app: str = "158.0.0.30.123"
     version_android: str = "9"
 
@@ -30,24 +30,23 @@ class Burbnbot:
                 connected devices
         """
         parser = argparse.ArgumentParser(add_help=True)
-        parser.add_argument("-d", "--device", type=str, default=None, help="Device serial number", required=False)
+        parser.add_argument("-d", "--device", type=str, default=device, help="Device serial number", required=False)
         args = parser.parse_args()
 
-        device = u2.connect(addr=args.device)
-        if len(device.app_list("com.instagram.android")) == 0:
+        self.device = u2.connect(addr=args.device)
+        if len(self.device.app_list("com.instagram.android")) == 0:
             print(bad("Instagram not installed."))
             quit()
-        self.session = device.session(package_name="com.instagram.android")
-        self.session.app_stop_all()
-        self.session.app_start(package_name="com.instagram.android")
-        self.session.xpath(elxpath.tab_bar_profile).click()
 
-        self.user = self.session.xpath("//*[@resource-id='com.instagram.android:id/title_view']").info['text']
+        self.device.app_stop_all()
+        self.device.app_start(package_name="com.instagram.android")
+        self.device(resourceId='com.instagram.android:id/profile_tab').click()
 
+        self.user = self.device.xpath("//*[@resource-id='com.instagram.android:id/title_view']").info['text']
         self.logger.add("log/{}-{}.log".format(datetime.date.today(), self.user),
                         backtrace=True, diagnose=True, level="DEBUG")
 
-        if not self.session.app_info(package_name="com.instagram.android")['versionName'] == self.version_app:
+        if not self.device.app_info(package_name="com.instagram.android")['versionName'] == self.version_app:
             print(info(
                 "You are using a different version than the recommended one, this can generate unexpected errors."))
 
@@ -56,18 +55,17 @@ class Burbnbot:
         a random number between 1 and 3 :type i: int
 
         Args:
-            i (int):
+            i (int): seconds to wait
         """
         if i is None:
             i = random.randint(1, 3)
-        # print(good("Waiting {} seconds".format(i)))
         sleep(i)
 
     def __reset_app(self):
         print(good("Restarting app"))
-        self.session.app_stop_all()
+        self.device.app_stop_all()
         self.__wait()
-        self.session.app_start(package_name="com.instagram.android")
+        self.device.app_start(package_name="com.instagram.android")
         self.__wait()
 
     def __treat_exception(self, err):
@@ -81,6 +79,12 @@ class Burbnbot:
         return False
 
     def __str_to_number(self, n: str):
+        """format (string) numbers in thousands, million or billions :param n:
+        string to convert :type n: str
+
+        Args:
+            n (str):
+        """
         n = n.strip().replace(",", "")
         num_map = {'K': 1000, 'M': 1000000, 'B': 1000000000}
         if n.isdigit():
@@ -91,11 +95,11 @@ class Burbnbot:
 
     def __scroll_down(self):
         e = "com.instagram.android:id/refreshable_container"
-        startX = int(self.session(resourceId=e).info['visibleBounds']['right'] / 2)
-        startY = int(self.session(resourceId=e).info['visibleBounds']['bottom'] * 0.90)
-        endX = startX
-        endY = int(self.session(resourceId=e).info['visibleBounds']['top'])
-        self.session.swipe(fx=startX, fy=startY, tx=endX, ty=endY)
+        start_x = int(self.device(resourceId=e).info['visibleBounds']['right'] / 2)
+        start_y = int(self.device(resourceId=e).info['visibleBounds']['bottom'] * 0.90)
+        end_x = start_x
+        end_y = int(self.device(resourceId=e).info['visibleBounds']['top'])
+        self.device.swipe(fx=start_x, fy=start_y, tx=end_x, ty=end_y)
 
     def __scroll_element_by_element(self, e):
         """take the last element informed in e and scroll to the first element
@@ -110,12 +114,26 @@ class Burbnbot:
             # tx = e[0].info['visibleBounds']['left']
             tx = fx
             ty = e[0].info['visibleBounds']['bottom']
-            self.session.swipe(fx, fy, tx, ty, duration=0)
+            self.device.swipe(fx, fy, tx, ty, duration=0)
+
+    def scroll_element_by_element_hor(self, e):
+        """take the last element informed in e and scroll to the first element
+        :param e: Element informed
+
+        Args:
+            e:
+        """
+        if e.count > 2:
+            fx = e[-1].info['visibleBounds']['right'] / 2
+            fy = e[-1].info['visibleBounds']['top']
+            tx = e[0].info['visibleBounds']['left'] / 2
+            ty = e[0].info['visibleBounds']['bottom']
+            self.device.swipe(fx, fy, tx, ty, duration=0)
 
     def __get_type_media(self) -> int:
-        if self.session(resourceId="com.instagram.android:id/carousel_media_group").exists:
+        if self.device(resourceId="com.instagram.android:id/carousel_media_group").exists:
             return MediaType.CAROUSEL
-        if self.session(resourceId="com.instagram.android:id/row_feed_photo_imageview").info['contentDescription']. \
+        if self.device(resourceId="com.instagram.android:id/row_feed_photo_imageview").info['contentDescription']. \
                 startswith("Video by "):
             return MediaType.VIDEO
         return MediaType.PHOTO
@@ -132,8 +150,8 @@ class Burbnbot:
         """
         url = "https://www.instagram.com/p/{}/".format(media_code)
         print(good("Opening post {}.".format(url)))
-        self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-        return self.session.xpath(elxpath.post_media_area).exists
+        self.device.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+        return self.device.xpath("//*[@resource-id='android:id/list']//*[@class='android.widget.FrameLayout'][2]").exists
 
     def open_profile(self, username: str) -> bool:
         """Open a profile
@@ -146,8 +164,9 @@ class Burbnbot:
         """
         url = "https://www.instagram.com/{}/".format(username)
         print(good("Opening profile {}.".format(url)))
-        self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-        return self.session.xpath(elxpath.row_profile_header_imageview).exists
+        self.device.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+        self.__wait()
+        return self.device(resourceId='com.instagram.android:id/row_profile_header_imageview').exists
 
     def open_tag(self, tag: str, aba: str = "Recent") -> bool:
         """Search a hashtag
@@ -160,20 +179,21 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         url = "https://www.instagram.com/explore/tags/{}/".format(tag)
-        self.session.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+        self.device.shell("am start -a android.intent.action.VIEW -d {}".format(url))
         self.__wait(5)
         if aba is not None:
-            while not self.session(resourceId="com.instagram.android:id/tab_layout").child_by_text(aba).exists:
+            while not self.device(resourceId="com.instagram.android:id/tab_layout").child_by_text(aba).exists:
                 self.__wait(1)
-            self.session(resourceId="com.instagram.android:id/tab_layout").child_by_text(aba).click()
+            self.device(resourceId="com.instagram.android:id/tab_layout").child_by_text(aba).click()
 
-        return self.session.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists
+        if self.device.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
+            self.device(resourceId='com.instagram.android:id/image_button').click()
 
-    def __center(self, element: None = ""):
+    def __center(self, element: u2.UiObject = ""):
         """Find the center of an element
 
         Args:
-            element (None): Element
+            element (u2.UiObject): Element
 
         Returns:
             int, int
@@ -191,26 +211,26 @@ class Burbnbot:
             e:
         """
         x, y = self.__center(element=e)
-        self.session.double_click(x, y, duration=0.1)
+        self.device.double_click(x, y, duration=0.1)
 
     def __like(self):
         row_feed_button_like = "com.instagram.android:id/row_feed_button_like"
         media_type = self.__get_type_media()
-        while self.session(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Like':
+        while self.device(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Like':
             if media_type == MediaType.VIDEO:
-                self.session(resourceId=row_feed_button_like, instance=0).click()
+                self.device(resourceId=row_feed_button_like, instance=0).click()
             else:
                 if media_type == MediaType.CAROUSEL:
                     self.__swipe_carousel()
 
             self.__double_click(
-                e=self.session(resourceId="android:id/list").child(className="android.widget.FrameLayout"))
+                e=self.device(resourceId="android:id/list").child(className="android.widget.FrameLayout"))
 
-            if self.session(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Like':
-                self.session(resourceId=row_feed_button_like, instance=0).click()
+            if self.device(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Like':
+                self.device(resourceId=row_feed_button_like, instance=0).click()
 
         self.__wait()
-        return self.session(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Liked'
+        return self.device(resourceId=row_feed_button_like, instance=0).info["contentDescription"] == 'Liked'
 
     def like(self):
         return self.__like()
@@ -218,46 +238,47 @@ class Burbnbot:
     def __swipe_carousel(self) -> None:
         try:
             n = int(re.search(r"(\d+).*?(\d+)",
-                              self.session(resourceId="com.instagram.android:id/carousel_image")[0]
+                              self.device(resourceId="com.instagram.android:id/carousel_image")[0]
                               .info['contentDescription']).group(2))
-        except Exception:
+        except:
             n = 2  # if don't find the number of pictures work with only 2
             pass
 
         for x in range(n - 1):
-            self.session(resourceId="com.instagram.android:id/carousel_image")[0].swipe("left")
+            self.device(resourceId="com.instagram.android:id/carousel_image")[0].swipe("left")
             self.__wait()
         for x in range(n - 1):
-            self.session(resourceId="com.instagram.android:id/carousel_image")[0].swipe("right")
+            self.device(resourceId="com.instagram.android:id/carousel_image")[0].swipe("right")
             self.__wait()
 
     def get_following_list(self):
+        list_following = []
         self.__reset_app()
-        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
-        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+        self.device(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+        self.device(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
         print(good("Opening following list"))
         following_count = self.__str_to_number(
-            self.session(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
+            self.device(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
         print(good("{} followings".format(following_count)))
-        self.session(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
+        self.device(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
         self.__wait()
-        while not self.session(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
-            self.session(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
+        while not self.device(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
+            self.device(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
             self.__wait()
-        self.session(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
+        self.device(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
         self.__wait()
-        if self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
-            list_following = []
-            t = 0
+        if self.device(resourceId="com.instagram.android:id/follow_list_username").exists:
             c = Counter("Following: ")
             while True:
                 c.index = len(list(dict.fromkeys(list_following)))
                 c.update()
                 try:
-                    list_following = list_following + [elem.get_text() for elem in self.session(
+                    list_following = list_following + [elem.get_text() for elem in self.device(
                         resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
-                    if not self.session(text="Suggestions for you").exists:
-                        self.__scroll_element_by_element(self.session(resourceId="com.instagram.android:id/follow_list_container"))
+                    if not self.device(text="Suggestions for you").exists:
+                        self.__scroll_element_by_element(
+                            self.device(resourceId="com.instagram.android:id/follow_list_container")
+                        )
                     else:
                         break
                 except:
@@ -267,52 +288,110 @@ class Burbnbot:
 
     def get_followers_list(self):
         self.__reset_app()
-        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
-        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+        list_following = []
+        self.device(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+        self.device(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
         print(good("Opening followers list"))
         followers_count = self.__str_to_number(
-            self.session(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
+            self.device(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
         print(good("{} followers".format(followers_count)))
-        self.session(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
+        self.device(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
         self.__wait()
-        if self.session(resourceId="com.instagram.android:id/follow_list_username").exists:
-            list_following = []
+        if self.device(resourceId="com.instagram.android:id/follow_list_username").exists:
             t = 0
             c = Counter("Following: ")
             while t < 5:
                 c.index = len(list(dict.fromkeys(list_following)))
                 c.update()
                 try:
-                    list_following = list_following + [elem.get_text() for elem in self.session(
+                    list_following = list_following + [elem.get_text() for elem in self.device(
                         resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                     self.__scroll_element_by_element(
-                        self.session(resourceId="com.instagram.android:id/follow_list_container"))
-                    if list_following[-1] == self.session(resourceId="com.instagram.android:id/follow_list_username").get_text():
+                        self.device(resourceId="com.instagram.android:id/follow_list_container"))
+                    if list_following[-1] == self.device(
+                            resourceId="com.instagram.android:id/follow_list_username").get_text():
                         t += 1
                     else:
                         t = 0
-                    self.session(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
+                    self.device(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
                 except:
                     pass
             c.finish()
         return list(dict.fromkeys(list_following))
 
+    def like_n_swipe(self, amount: int = 30):
+        """
+        Args:
+            amount (int):
+        """
+        lk = 0
+        c = Counter("Liking feed: ")
+        while lk < amount:
+            c.index = lk
+            c.update()
+            self.__wait()
+            try:
+                if self.device(description="Like", className="android.widget.ImageView").exists:
+                    lk = lk + len([e.click() for e in self.device(
+                        description="Like", className="android.widget.ImageView")])
+                else:
+                    self.device(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
+            except:
+                pass
+
     def unfollow(self, username: str):
-        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
-        self.session(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
-        self.session(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
+        """
+        Args:
+            username (str):
+        """
+        self.device(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+        self.device(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+        self.device(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
         self.__wait()
-        self.session(resourceId="com.instagram.android:id/row_search_edit_text").send_keys(username)
+        self.device(resourceId="com.instagram.android:id/row_search_edit_text").send_keys(username)
         self.__wait()
-        if self.session(resourceId="com.instagram.android:id/button").count == 1:
-            if self.session(resourceId="com.instagram.android:id/button").get_text() == 'Following':
-                self.session(resourceId="com.instagram.android:id/button").click(timeout=5)
+        if self.device(resourceId="com.instagram.android:id/button").count == 1:
+            if self.device(resourceId="com.instagram.android:id/button").get_text() == 'Following':
+                self.device(resourceId="com.instagram.android:id/button").click(timeout=5)
         else:
             return False
-        return self.session(resourceId="com.instagram.android:id/button").get_text() == 'Follow'
+        return self.device(resourceId="com.instagram.android:id/button").get_text() == 'Follow'
 
     def follow(self, username: str):
+        """
+        Args:
+            username (str):
+        """
         if self.open_profile(username):
-            if self.session(resourceId="com.instagram.android:id/button").get_text() == 'Follow':
-                self.session(resourceId="com.instagram.android:id/button").click()
-        return self.session(resourceId="com.instagram.android:id/button").get_text() == 'Following'
+            if self.device(resourceId="com.instagram.android:id/button").get_text() == "Follow":
+                self.device(resourceId="com.instagram.android:id/button").click()
+        return self.device(resourceId="com.instagram.android:id/button").get_text() == "Following"
+
+    def save_user(self, username: str, colletion: str = None):
+        if colletion is None:
+            colletion = str(datetime.date.today())
+        if self.open_profile(username):
+            if self.device(resourceId="com.instagram.android:id/profile_viewpager").child(className="android.widget.ImageView").exists:
+                self.device(resourceId="com.instagram.android:id/profile_viewpager").child(className="android.widget.ImageView").click()
+                self.__wait()
+                self.device(resourceId="com.instagram.android:id/row_feed_button_save").long_click(duration=3)
+                if self.device(resourceId="com.instagram.android:id/collection_name").exists:
+                    collections_name = [e.get_text() for e in self.device(resourceId="com.instagram.android:id/collection_name")]
+                    lst = ""
+                    while not lst == collections_name[-1]:
+                        if self.device(text=colletion).exists:
+                            self.device(text=colletion).click()
+                            return True
+                        collections_name = collections_name + [e.get_text() for e in self.device(resourceId="com.instagram.android:id/collection_name")]
+                        self.scroll_element_by_element_hor(self.device(resourceId="com.instagram.android:id/selectable_image"))
+                        lst = self.device(resourceId="com.instagram.android:id/collection_name")[-1].get_text()
+
+                    self.device(resourceId='com.instagram.android:id/save_to_collection_new_collection_button').click()
+                    self.__wait()
+                    self.device(resourceId='com.instagram.android:id/create_collection_edit_text').send_keys(colletion)
+                    self.device(resourceId='com.instagram.android:id/save_to_collection_action_button').click()
+                    return True
+        return False
+
+
+
