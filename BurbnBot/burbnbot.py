@@ -184,8 +184,8 @@ class Burbnbot:
             self.device(resourceId='com.instagram.android:id/image_button').click()
 
     def open_home_feed(self):
-        self.device(description="Home").click()
-        self.device(description="Home").click()
+        self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
+        self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
 
     def __center(self, element: u2.UiObject):
         """Find the center of an element
