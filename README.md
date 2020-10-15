@@ -77,6 +77,11 @@ bot.like_n_swipe(3)
 # open the post https://www.instagram.com/p/B_nrbNPndh0/  
 bot.open_media(media_code="B_nrbNPndh0")  
 bot.like_n_swipe()  
+
+# open home feed and like 15 posts
+bot.open_home_feed()
+bot.like_n_swipe(15)
+
 ```  
   
 ## Contributing  

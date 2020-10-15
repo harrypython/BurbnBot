@@ -49,7 +49,7 @@ class Burbnbot:
                 "You are using a different version than the recommended one, this can generate unexpected errors."))
 
     def __printcount(self, msg: str, i: int):
-        print(good(msg + ' [%d]\r' % i), end="")
+        print(run(msg + ' [%d]\r' % i), end="")
 
     def __wait(self, i: int = None):
         """Wait the device :param i: number of seconds to wait, if None will be
@@ -183,6 +183,10 @@ class Burbnbot:
         if self.device.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
             self.device(resourceId='com.instagram.android:id/image_button').click()
 
+    def open_home_feed(self):
+        self.device(description="Home").click()
+        self.device(description="Home").click()
+
     def __center(self, element: u2.UiObject):
         """Find the center of an element
 
@@ -237,7 +241,7 @@ class Burbnbot:
                 except:
                     pass
                 self.__printcount(msg="Following: ", i=len(list(dict.fromkeys(list_following))))
-            print(info("Done"), "\r")
+            print(good("Done"), "\r")
         return list(dict.fromkeys(list_following))
 
     def get_followers_list(self):
@@ -268,7 +272,7 @@ class Burbnbot:
                 except:
                     pass
                 self.__printcount(msg="Following: ", i=len(list(dict.fromkeys(list_following))))
-            print(info("Done"), "\r")
+            print(good("Done"), "\r")
         return list(dict.fromkeys(list_following))
 
     def like_n_swipe(self, amount: int = 1):
@@ -287,8 +291,9 @@ class Burbnbot:
                     self.device(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
             except:
                 pass
-            self.__printcount(msg="Liked: ", i=lk)
-        print(info("End of likes."))
+            self.__printcount(msg="Liked:", i=lk)
+        print(good("Liked: [{}]".format(lk)))
+        print(good("End of likes."))
 
     def unfollow(self, username: str):
         """
@@ -319,3 +324,9 @@ class Burbnbot:
         return self.device(resourceId="com.instagram.android:id/button").get_text() == "Following"
 
 
+                    self.device(resourceId='com.instagram.android:id/save_to_collection_new_collection_button').click()
+                    self.__wait()
+                    self.device(resourceId='com.instagram.android:id/create_collection_edit_text').send_keys(colletion)
+                    self.device(resourceId='com.instagram.android:id/save_to_collection_action_button').click()
+                    return True
+        return False
