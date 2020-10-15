@@ -318,33 +318,4 @@ class Burbnbot:
                 self.device(resourceId="com.instagram.android:id/button").click()
         return self.device(resourceId="com.instagram.android:id/button").get_text() == "Following"
 
-    def save_user(self, username: str, colletion: str = None):
-        if colletion is None:
-            colletion = str(datetime.date.today())
-        if self.open_profile(username):
-            if self.device(resourceId="com.instagram.android:id/profile_viewpager").child(
-                    className="android.widget.ImageView").exists:
-                self.device(resourceId="com.instagram.android:id/profile_viewpager").child(
-                    className="android.widget.ImageView").click()
-                self.__wait()
-                self.device(resourceId="com.instagram.android:id/row_feed_button_save").long_click(duration=3)
-                if self.device(resourceId="com.instagram.android:id/collection_name").exists:
-                    collections_name = [e.get_text() for e in
-                                        self.device(resourceId="com.instagram.android:id/collection_name")]
-                    lst = ""
-                    while not lst == collections_name[-1]:
-                        if self.device(text=colletion).exists:
-                            self.device(text=colletion).click()
-                            return True
-                        collections_name = collections_name + [e.get_text() for e in self.device(
-                            resourceId="com.instagram.android:id/collection_name")]
-                        self.__scrool_elements_horizontally(
-                            self.device(resourceId="com.instagram.android:id/selectable_image"))
-                        lst = self.device(resourceId="com.instagram.android:id/collection_name")[-1].get_text()
 
-                    self.device(resourceId='com.instagram.android:id/save_to_collection_new_collection_button').click()
-                    self.__wait()
-                    self.device(resourceId='com.instagram.android:id/create_collection_edit_text').send_keys(colletion)
-                    self.device(resourceId='com.instagram.android:id/save_to_collection_action_button').click()
-                    return True
-        return False
