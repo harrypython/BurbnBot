@@ -14,6 +14,8 @@ BurbnBot is a bot for automated interaction in a famous social media app using a
 - Android 9.0  
 - Python 3.6+  
 - [Android platform tools](https://developer.android.com/studio/releases/platform-tools).
+####Tested with:
+[Instagram release 158.0.0.30.123](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-instagram-158-0-0-30-123-release/).
 ## Installation
 1. Download and install [Android platform tools](https://developer.android.com/studio/releases/platform-tools).  
 1. Clone the repo: 
@@ -28,7 +30,7 @@ BurbnBot is a bot for automated interaction in a famous social media app using a
 
 ## Get started  
 1. Connect an Android device with a USB cable or run an [Android Virtual Device](https://developer.android.com/studio/run/emulator).
-1. Make sure you [enabled adb debugging](https://developer.android.com/studio/command-line/adb.html#Enabling) on your device(s). 
+1. Make sure you [enabled adb debugging](https://developer.android.com/studio/command-line/adb.html#Enabling) on your device(s).
 1. You can test the device with the command:
 	```bash 
 	adb devices 
