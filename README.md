@@ -14,8 +14,10 @@ BurbnBot is a bot for automated interaction in a famous social media app using a
 - Android 9.0  
 - Python 3.6+  
 - [Android platform tools](https://developer.android.com/studio/releases/platform-tools).
-####Tested with:
+
+#### Tested with:
 [Instagram release 158.0.0.30.123](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-instagram-158-0-0-30-123-release/).
+
 ## Installation
 1. Download and install [Android platform tools](https://developer.android.com/studio/releases/platform-tools).  
 1. Clone the repo: 
