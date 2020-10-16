@@ -4,7 +4,7 @@ import datetime
 from time import sleep
 from loguru import logger
 from huepy import *
-import uiautomator2 as u2
+import uiautomator2
 
 
 class MediaType(object):
@@ -15,7 +15,7 @@ class MediaType(object):
 
 
 class Burbnbot:
-    device: u2.Device
+    device: uiautomator2.Device
     logPath: str = "log/"
     logger: logger = logger  #: Logger
     version_app: str = "158.0.0.30.123"
@@ -31,18 +31,14 @@ class Burbnbot:
         parser.add_argument("-d", "--device", type=str, default=device, help="Device serial number", required=False)
         args = parser.parse_args()
 
-        self.device = u2.connect(addr=args.device)
+        self.device = uiautomator2.connect(addr=args.device)
         if len(self.device.app_list("com.instagram.android")) == 0:
             print(bad("Instagram not installed."))
             quit()
 
         self.device.app_stop_all()
-        self.device.app_start(package_name="com.instagram.android")
-        self.device(resourceId='com.instagram.android:id/profile_tab').click()
 
-        self.user = self.device.xpath("//*[@resource-id='com.instagram.android:id/title_view']").info['text']
-        self.logger.add("log/{}-{}.log".format(datetime.date.today(), self.user),
-                        backtrace=True, diagnose=True, level="DEBUG")
+        self.device.app_start(package_name="com.instagram.android")
 
         if not self.device.app_info(package_name="com.instagram.android")['versionName'] == self.version_app:
             print(info(
@@ -84,7 +80,7 @@ class Burbnbot:
             n = float(n[:-1]) * num_map.get(n[-1].upper(), 1)
         return int(n)
 
-    def __scroll_elements_vertically(self, e: u2.UiObject):
+    def __scroll_elements_vertically(self, e: uiautomator2.UiObject):
         """take the last element informed in e and scroll to the first element
         :param e (u2.UiObject): Element informed
 
@@ -99,7 +95,7 @@ class Burbnbot:
             ty = e[0].info['visibleBounds']['bottom']
             self.device.swipe(fx, fy, tx, ty, duration=0)
 
-    def __scrool_elements_horizontally(self, e: u2.UiObject):
+    def __scrool_elements_horizontally(self, e: uiautomator2.UiObject):
         """take the last element informed in e and scroll to the first element
         :param e (u2.UiObject): Element informed
 
@@ -161,7 +157,7 @@ class Burbnbot:
                 print(bad("Looks like this profile have zero posts."))
         return r
 
-    def open_tag(self, tag: str, tab: str = "Recent") -> bool:
+    def open_tag(self, tag: str, tab: str = "Recent"):
         """Search a hashtag
 
         Args:
@@ -187,7 +183,7 @@ class Burbnbot:
         self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
         self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
 
-    def __center(self, element: u2.UiObject):
+    def __center(self, element: uiautomator2.UiObject):
         """Find the center of an element
 
         Args:
@@ -202,7 +198,7 @@ class Burbnbot:
         y = ly + height * 0.5
         return x, y
 
-    def __double_click(self, e: u2.UiObject):
+    def __double_click(self, e: uiautomator2.UiObject):
         """Double click center the element :param e: Element
 
         Args:
@@ -236,6 +232,7 @@ class Burbnbot:
                         self.__scroll_elements_vertically(
                             self.device(resourceId="com.instagram.android:id/follow_list_container")
                         )
+                        self.__wait(random.randint(15, 60))
                     else:
                         break
                 except:
@@ -263,6 +260,7 @@ class Burbnbot:
                         resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                     self.__scroll_elements_vertically(
                         self.device(resourceId="com.instagram.android:id/follow_list_container"))
+                    self.__wait(random.randint(15, 60))
                     if list_following[-1] == self.device(
                             resourceId="com.instagram.android:id/follow_list_username").get_text():
                         t += 1
@@ -288,7 +286,8 @@ class Burbnbot:
                     lk = lk + len(
                         [e.click() for e in self.device(description="Like", className="android.widget.ImageView")])
                 else:
-                    self.device(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
+                    self.device(resourceId="com.instagram.android:id/refreshable_container")\
+                        .swipe(direction="up", steps=15)
             except:
                 pass
             self.__printcount(msg="Liked:", i=lk)
