@@ -2,7 +2,6 @@ import argparse
 import random
 import datetime
 from time import sleep
-from loguru import logger
 from huepy import *
 import uiautomator2
 
@@ -16,8 +15,6 @@ class MediaType(object):
 
 class Burbnbot:
     device: uiautomator2.Device
-    logPath: str = "log/"
-    logger: logger = logger  #: Logger
     version_app: str = "158.0.0.30.123"
     version_android: str = "9"
 
@@ -45,6 +42,11 @@ class Burbnbot:
                 "You are using a different version than the recommended one, this can generate unexpected errors."))
 
     def __printcount(self, msg: str, i: int):
+        """
+        Args:
+            msg (str):
+            i (int):
+        """
         print(run(msg + ' [%d]\r' % i), end="")
 
     def __wait(self, i: int = None):
@@ -85,7 +87,7 @@ class Burbnbot:
         :param e (u2.UiObject): Element informed
 
         Args:
-            e:
+            e (uiautomator2.UiObject):
         """
         if e.count > 2:
             fx = e[-1].info['visibleBounds']['right'] / 2
@@ -100,12 +102,12 @@ class Burbnbot:
         :param e (u2.UiObject): Element informed
 
         Args:
-            e:
+            e (uiautomator2.UiObject):
         """
         if e.count > 2:
-            fx = e[-1].info['visibleBounds']['right'] / 2
+            fx = e[-1].info['visibleBounds']['left']
             fy = e[-1].info['visibleBounds']['top']
-            tx = e[0].info['visibleBounds']['left'] / 2
+            tx = e[0].info['visibleBounds']['left']
             ty = e[0].info['visibleBounds']['bottom']
             self.device.swipe(fx, fy, tx, ty, duration=0)
 
@@ -179,15 +181,11 @@ class Burbnbot:
         if self.device.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
             self.device(resourceId='com.instagram.android:id/image_button').click()
 
-    def open_home_feed(self):
-        self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
-        self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
-
     def __center(self, element: uiautomator2.UiObject):
         """Find the center of an element
 
         Args:
-            element (u2.UiObject): Element
+            element (uiautomator2.UiObject): Element
 
         Returns:
             int, int
@@ -202,7 +200,7 @@ class Burbnbot:
         """Double click center the element :param e: Element
 
         Args:
-            e: (u2.UiObject): Element
+            e (uiautomator2.UiObject): Element
         """
         x, y = self.__center(element=e)
         self.device.double_click(x, y, duration=0.1)
