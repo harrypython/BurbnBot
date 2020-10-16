@@ -327,3 +327,14 @@ class Burbnbot:
                     self.device(resourceId='com.instagram.android:id/save_to_collection_action_button').click()
                     return True
         return False
+
+    def get_notification_users(self) -> list:
+        """return the last users who interacted with you"""
+        list_users = []
+        self.device(resourceId="com.instagram.android:id/notification").click()
+        self.device(resourceId="com.instagram.android:id/notification").click()
+        while not self.device(text="Suggestions for you").exists:
+            list_users = list_users + [e.get_text().split()[0] for e in self.device(resourceId="com.instagram.android:id/row_text")]
+            self.__scrool_elements_horizontally(self.device(resourceId="com.instagram.android:id/row_text"))
+        return list(dict.fromkeys(list_users))
+

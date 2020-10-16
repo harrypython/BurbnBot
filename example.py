@@ -33,3 +33,7 @@ bot.like_n_swipe()
 bot.open_home_feed()
 bot.like_n_swipe(15)
 
+# return the last users who interacted with you
+notification_users = bot.get_notification_users()
+for u in notification_users:
+    bot.like_n_swipe(1)  # like the last post from users who interacted with you
