@@ -119,6 +119,56 @@ class Burbnbot:
             return MediaType.VIDEO
         return MediaType.PHOTO
 
+    def open_home_feed(self):
+        self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
+        self.device(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
+
+    def get_users_liked_by_you(self, amount):
+        self.device(resourceId="com.instagram.android:id/profile_tab").click()
+        self.device(resourceId="com.instagram.android:id/profile_tab").click()
+        self.device(description="Options").click()
+        self.device(resourceId="com.instagram.android:id/menu_settings_row").click()
+        self.device(resourceId="com.instagram.android:id/row_simple_text_textview", text="Account").click()
+        self.device(resourceId="com.instagram.android:id/row_simple_text_textview", text="Posts You've Liked").click()
+        u = []
+        while not self.device(resourceId="com.instagram.android:id/media_set_row_content_identifier").exists:
+            self.__wait()
+        while True:
+            for c in [r.child(className="android.widget.ImageView") for r in self.device(resourceId="com.instagram.android:id/media_set_row_content_identifier")]:
+                for p in c:
+                    p.click()
+                    if self.device(resourceId="com.instagram.android:id/button", text="Follow").exists:
+                        u.append(self.device(resourceId="com.instagram.android:id/row_feed_photo_profile_name").get_text().split()[0])
+                    self.device.press("back")
+            self.__scroll_elements_vertically(self.device(resourceId="com.instagram.android:id/media_set_row_content_identifier"))
+            while self.device(resourceId="com.instagram.android:id/row_load_more_button").exists:
+                self.device(resourceId="com.instagram.android:id/row_load_more_button").click()
+                self.__wait()
+            u = list(dict.fromkeys(u))
+            if len(u) > amount:
+                break
+
+        return u[:amount]
+
+    def login(self, username: str, password: str, reset: bool = False):
+        """
+        Args:
+            username (str):
+            password (str):
+            reset (bool):
+        """
+        if reset:
+            self.device.app_clear("com.instagram.android")
+        self.device.app_start(package_name="com.instagram.android")
+        if self.device(text="Log In").exists:
+            self.device(text="Log In").click()
+        if self.device(resourceId='com.instagram.android:id/login_username').exists and self.device(
+                resourceId='com.instagram.android:id/password').exists:
+            self.device(resourceId='com.instagram.android:id/login_username').send_keys(username)
+            self.device(resourceId='com.instagram.android:id/password').send_keys(password)
+            self.device(resourceId='com.instagram.android:id/button_text').click()
+            self.__wait()
+
     def open_media(self, media_code: str) -> bool:
         """Open a post by the code eg. in
         https://www.instagram.com/p/CFr6-Q-sAFi/ the code is CFr6-Q-sAFi
@@ -320,6 +370,34 @@ class Burbnbot:
                 self.device(resourceId="com.instagram.android:id/button").click()
         return self.device(resourceId="com.instagram.android:id/button").get_text() == "Following"
 
+    def save_user(self, username: str, colletion: str = None):
+        """
+        Args:
+            username (str):
+            colletion (str):
+        """
+        if colletion is None:
+            colletion = str(datetime.date.today())
+        if self.open_profile(username):
+            if self.device(resourceId="com.instagram.android:id/profile_viewpager").child(
+                    className="android.widget.ImageView").exists:
+                self.device(resourceId="com.instagram.android:id/profile_viewpager").child(
+                    className="android.widget.ImageView").click()
+                self.__wait()
+                self.device(resourceId="com.instagram.android:id/row_feed_button_save").long_click(duration=3)
+                if self.device(resourceId="com.instagram.android:id/collection_name").exists:
+                    collections_name = [e.get_text() for e in
+                                        self.device(resourceId="com.instagram.android:id/collection_name")]
+                    lst = ""
+                    while not lst == collections_name[-1]:
+                        if self.device(text=colletion).exists:
+                            self.device(text=colletion).click()
+                            return True
+                        collections_name = collections_name + [e.get_text() for e in self.device(
+                            resourceId="com.instagram.android:id/collection_name")]
+                        self.__scrool_elements_horizontally(
+                            self.device(resourceId="com.instagram.android:id/selectable_image"))
+                        lst = self.device(resourceId="com.instagram.android:id/collection_name")[-1].get_text()
 
                     self.device(resourceId='com.instagram.android:id/save_to_collection_new_collection_button').click()
                     self.__wait()
