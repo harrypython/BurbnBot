@@ -38,3 +38,9 @@ notification_users = bot.get_notification_users()
 for u in notification_users:
     bot.open_profile(username=u)
     bot.like_n_swipe(1)  # like the last post from users who interacted with you
+
+# return the hashtags followed by you
+followed_hashtags = bot.get_followed_hashtags()
+for hashtag in followed_hashtags:
+    bot.open_tag(tag=hashtag, tab="Recent")  # open the hashtag feed in the 'Recent' tab
+    bot.like_n_swipe(amount=10)  # like 10 posts
