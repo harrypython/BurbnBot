@@ -338,3 +338,20 @@ class Burbnbot:
             self.__scrool_elements_horizontally(self.device(resourceId="com.instagram.android:id/row_text"))
         return list(dict.fromkeys(list_users))
 
+    def get_followed_hashtags(self) -> list:
+        """return the hashtags followed by you"""
+        fh = []
+        self.device(resourceId="com.instagram.android:id/profile_tab").click()
+        self.device(resourceId="com.instagram.android:id/profile_tab").click()
+        self.device(resourceId="com.instagram.android:id/row_profile_header_following_container").click()
+        self.device(resourceId="com.instagram.android:id/row_hashtag_image").click()
+        self.__wait()
+        while True:
+            fh = fh + [l.info.get("contentDescription").split()[1] for l in
+                       self.device(resourceId="com.instagram.android:id/follow_button", text="Following")]
+            self.__scroll_elements_vertically(self.device(resourceId="com.instagram.android:id/follow_list_user_imageview"))
+            if self.device(resourceId="com.instagram.android:id/row_header_textview", text="Suggestions").exists:
+                fh = fh + [l.info.get("contentDescription").split()[1] for l in
+                           self.device(resourceId="com.instagram.android:id/follow_button", text="Following")]
+                break
+        return list(dict.fromkeys(fh))
