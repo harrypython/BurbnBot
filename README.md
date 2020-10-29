@@ -22,8 +22,8 @@ BurbnBot is a bot for automated interaction in a famous social media app using a
 1. Download and install [Android platform tools](https://developer.android.com/studio/releases/platform-tools).  
 1. Clone the repo: 
 	```bash 
-	git clone https://github.com/harrypython/itsagramlive.git
-	cd itsagramlive 
+	git clone https://github.com/harrypython/BurbnBot.git
+	cd BurbnBot 
 	```  
 1. Install the requirements: 
 	```bash 
