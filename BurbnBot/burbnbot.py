@@ -367,25 +367,28 @@ class Burbnbot:
                                                                                               steps=15)
             except Exception as e:
                 if isinstance(e, uiautomator2.UiObjectNotFoundError):
-                    self.not_found_like(e)
+                    self.__not_found_like(e)
                 pass
             self.d.dump_hierarchy()
 
         sys.stdout.write("\033[K")  # Clear to the end of line
         print(good("Liked: {}/{}".format(lk, amount)))
 
-    def not_found_like(self, e: uiautomator2.UiObjectNotFoundError):
+    def __not_found_like(self, e: uiautomator2.UiObjectNotFoundError):
         if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
             if self.d(resourceId="com.instagram.android:id/default_dialog_title").get_text() == "Try Again Later":
                 print(bad("ERROR: TOO MANY REQUESTS, TAKE A BREAK HAMILTON."))
                 quit(1)
+
+        print(bad("Element not found: {} You probably don't have to worry about.".format(e.data)))
+
         # sometimes a wrong click open a different screen
         if (self.d(resourceId="com.instagram.android:id/profile_header_avatar_container_top_left_stub").exists or
             self.d(resourceId="com.instagram.android:id/pre_capture_buttons_top_container").exists) or \
                 (not self.d(resourceId="com.instagram.android:id/refreshable_container").exists and
                  self.d(resourceId="com.instagram.android:id/action_bar_new_title_container").exists):
+            print(bad("It looks like we're in the wrong place, let's try to get back."))
             self.d.press("back")
-        print(bad("Element not found: {} You probably don't have to worry about.".format(e.data)))
 
     def unfollow(self, username: str):
         """
