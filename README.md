@@ -45,7 +45,7 @@ BurbnBot is a bot for automated interaction in a famous social media app using a
    ```
 1. You can copy the example.py or create your script
 	```bash 
-	python example.py
+	python example.py -d emulator-5554
 	```
 ## Usage  
   

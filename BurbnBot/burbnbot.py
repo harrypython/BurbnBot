@@ -47,6 +47,18 @@ class Burbnbot:
             print(info(
                 "You are using a different version than the recommended one, this can generate unexpected errors."))
 
+        if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
+            ri = "com.instagram.android:id/default_dialog_title"
+            if self.d(resourceId=ri).get_text() == "You've Been Logged Out":
+                print(bad("You've Been Logged Out. Please log back in."))
+                self.d.app_clear(package_name="com.instagram.android")
+                quit()
+
+        if self.d(resourceId="com.instagram.android:id/login_username").exists:
+            print(bad("You've Been Logged Out. Please log back in."))
+            self.d.app_clear(package_name="com.instagram.android")
+            quit()
+
     def __reset_app(self):
         print(good("Restarting app"))
         self.d.app_stop_all()
@@ -100,6 +112,7 @@ class Burbnbot:
             tx = fx
             ty = e[0].info['visibleBounds']['bottom']
             self.d.swipe(fx, fy, tx, ty, duration=0)
+            self.d.dump_hierarchy()
 
     def __scrool_elements_horizontally(self, e: uiautomator2.UiObject):
         """take the last element informed in e and scroll to the first element
@@ -145,11 +158,9 @@ class Burbnbot:
                 for p in c:
                     p.click()
                     if self.d(resourceId="com.instagram.android:id/button", text="Follow").exists:
-                        u.append(self.d(
-                            resourceId="com.instagram.android:id/row_feed_photo_profile_name").get_text().split()[0])
+                        u.append(self.d(resourceId="com.instagram.android:id/row_feed_photo_profile_name").get_text().split()[0])
                     self.d.press("back")
-            self.__scroll_elements_vertically(
-                self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier"))
+            self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier"))
             while self.d(resourceId="com.instagram.android:id/row_load_more_button").exists:
                 self.d(resourceId="com.instagram.android:id/row_load_more_button").click()
                 self.wait()
@@ -280,8 +291,7 @@ class Burbnbot:
         self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
         self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
         print(good("Opening following list"))
-        following_count = self.__str_to_number(
-            self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
+        following_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
         print(good("{} followings".format(following_count)))
         self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
         self.wait()
@@ -292,19 +302,18 @@ class Burbnbot:
         self.wait()
         if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
             while True:
+
                 try:
-                    list_following = list_following + [elem.get_text() for elem in self.d(
-                        resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
-                    if not self.d(text="Suggestions for you").exists:
-                        self.__scroll_elements_vertically(
-                            self.d(resourceId="com.instagram.android:id/follow_list_container")
-                        )
-                        self.wait(random.randint(15, 60))
-                    else:
-                        break
+                    list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
                     pass
+
+                if self.d(text="Suggestions for you").exists:
+                    list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                    break
+
                 print(run("Following: #{}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
             print(good("Done"), "\r")
         return list(dict.fromkeys(list_following))
@@ -328,7 +337,7 @@ class Burbnbot:
                         resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                     self.__scroll_elements_vertically(
                         self.d(resourceId="com.instagram.android:id/follow_list_container"))
-                    self.wait(random.randint(15, 60))
+                    self.wait()
                     if list_following[-1] == self.d(
                             resourceId="com.instagram.android:id/follow_list_username").get_text():
                         t += 1
@@ -356,7 +365,7 @@ class Burbnbot:
         """
         lk = 0
         while lk < amount:
-            self.wait(muted=True)
+            self.wait(i=random.randint(15, 60), muted=True)
             try:
                 if self.d(description="Like", className="android.widget.ImageView").exists:
                     lk = lk + len([self.__click_n_wait(e) for e in
@@ -365,9 +374,8 @@ class Burbnbot:
                 else:
                     self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up",
                                                                                               steps=15)
-            except Exception as e:
-                if isinstance(e, uiautomator2.UiObjectNotFoundError):
-                    self.__not_found_like(e)
+            except uiautomator2.UiObjectNotFoundError as e:
+                self.__not_found_like(e)
                 pass
             self.d.dump_hierarchy()
 
@@ -378,6 +386,7 @@ class Burbnbot:
         if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
             if self.d(resourceId="com.instagram.android:id/default_dialog_title").get_text() == "Try Again Later":
                 print(bad("ERROR: TOO MANY REQUESTS, TAKE A BREAK HAMILTON."))
+                self.d.app_clear(package_name="com.instagram.android")
                 quit(1)
 
         print(bad("Element not found: {} You probably don't have to worry about.".format(e.data)))
@@ -473,22 +482,21 @@ class Burbnbot:
 
     def get_followed_hashtags(self) -> list:
         """return the hashtags followed by you"""
+        self.__reset_app()
         fh = []
         self.d(resourceId="com.instagram.android:id/profile_tab").click()
         self.d(resourceId="com.instagram.android:id/profile_tab").click()
         self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click()
         self.d(resourceId="com.instagram.android:id/row_hashtag_image").click()
         self.wait()
-        while True:
-            fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in
-                       self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
-            self.__scroll_elements_vertically(
-                self.d(resourceId="com.instagram.android:id/follow_list_user_imageview")
-            )
-            if self.d(resourceId="com.instagram.android:id/row_header_textview", text="Suggestions").exists:
-                fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in
-                           self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
-                break
+        while not self.d(resourceId="com.instagram.android:id/row_header_textview", text="Suggestions").exists:
+            try:
+                fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
+                self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_user_imageview"))
+            except Exception as e:
+                # print(bad("Error: {}.".format(e.message)))
+                pass
+        fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
         return list(dict.fromkeys(fh))
 
     def logout_other_devices(self):
