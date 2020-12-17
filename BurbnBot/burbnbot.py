@@ -365,7 +365,7 @@ class Burbnbot:
         """
         lk = 0
         while lk < amount:
-            self.wait(i=random.randint(15, 60), muted=True)
+            self.wait(i=random.randint(5, 10), muted=True)
             try:
                 if self.d(description="Like", className="android.widget.ImageView").exists:
                     lk = lk + len([self.__click_n_wait(e) for e in
