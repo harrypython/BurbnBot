@@ -3,6 +3,7 @@ import random
 import datetime
 from time import sleep
 from huepy import *
+from loguru import logger
 import sys
 import uiautomator2
 
@@ -25,6 +26,9 @@ class Burbnbot:
             device (str): Device serial number, use 'adb devices' to a list of
                 connected devices
         """
+
+        logger.add("log/{}.log".format(str(datetime.date.today())), level="DEBUG")
+
         if device is None:
             parser = argparse.ArgumentParser(add_help=True)
             parser.add_argument("-d", "--device", type=str, default=device, help="Device serial number", required=False)
@@ -36,7 +40,9 @@ class Burbnbot:
         self.d = uiautomator2.connect(addr=device_addr)
 
         if len(self.d.app_list("com.instagram.android")) == 0:
-            print(bad("Instagram not installed."))
+            msg = "Instagram not installed."
+            print(bad(msg))
+            logger.error(msg)
             quit()
 
         self.d.app_stop_all()
@@ -50,12 +56,16 @@ class Burbnbot:
         if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
             ri = "com.instagram.android:id/default_dialog_title"
             if self.d(resourceId=ri).get_text() == "You've Been Logged Out":
-                print(bad("You've Been Logged Out. Please log back in."))
+                msg = "You've Been Logged Out. Please log back in."
+                print(bad(msg))
+                logger.error(msg)
                 self.d.app_clear(package_name="com.instagram.android")
                 quit()
 
         if self.d(resourceId="com.instagram.android:id/login_username").exists:
-            print(bad("You've Been Logged Out. Please log back in."))
+            msg = "You've Been Logged Out. Please log back in."
+            print(bad(msg))
+            logger.error(msg)
             self.d.app_clear(package_name="com.instagram.android")
             quit()
 
@@ -308,6 +318,7 @@ class Burbnbot:
                     self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
+                    logger.exception()
                     pass
 
                 if self.d(text="Suggestions for you").exists:
@@ -346,6 +357,7 @@ class Burbnbot:
                     self.d(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
+                    logger.exception()
                     pass
 
                 print(run("Followers #: {}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
@@ -396,7 +408,9 @@ class Burbnbot:
             self.d(resourceId="com.instagram.android:id/pre_capture_buttons_top_container").exists) or \
                 (not self.d(resourceId="com.instagram.android:id/refreshable_container").exists and
                  self.d(resourceId="com.instagram.android:id/action_bar_new_title_container").exists):
-            print(bad("It looks like we're in the wrong place, let's try to get back."))
+            msg = "It looks like we're in the wrong place, let's try to get back."
+            print(bad(msg))
+            logger.error(msg)
             self.d.press("back")
 
     def unfollow(self, username: str):
@@ -477,6 +491,7 @@ class Burbnbot:
                 self.__scrool_elements_horizontally(self.d(resourceId="com.instagram.android:id/row_text"))
             except Exception as e:
                 print(bad("Error: {}.".format(e.message)))
+                logger.exception()
                 pass
         return list(dict.fromkeys(list_users))
 
@@ -495,6 +510,7 @@ class Burbnbot:
                 self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_user_imageview"))
             except Exception as e:
                 # print(bad("Error: {}.".format(e.message)))
+                logger.exception()
                 pass
         fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
         return list(dict.fromkeys(fh))
