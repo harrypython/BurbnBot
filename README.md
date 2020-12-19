@@ -78,8 +78,8 @@ bot.open_profile(username="badgalriri", open_post=True)
 # swipe and like 3 pictures do feed opened before
 bot.like_n_swipe(3)
 
-# open the post https://www.instagram.com/p/B_nrbNPndh0/
-bot.open_media(media_code="B_nrbNPndh0")
+# open the post https://www.instagram.com/p/CI9ivzMH1Rk/
+bot.open_media(media_code="CI9ivzMH1Rk")
 bot.like_n_swipe()
 
 # open home feed and like 15 posts
