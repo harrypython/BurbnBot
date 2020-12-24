@@ -1,11 +1,12 @@
 import argparse
-import random
 import datetime
-from time import sleep
-from huepy import *
-from loguru import logger
+import random
 import sys
+from time import sleep
+
+import loguru
 import uiautomator2
+from huepy import *
 
 
 class MediaType(object):
@@ -19,7 +20,7 @@ class Burbnbot:
     d: uiautomator2.Device
     version_app: str = "158.0.0.30.123"
     version_android: str = "9"
-    logger: logger
+    lg: loguru.logger = loguru.logger
 
     def __init__(self, device: str = None) -> None:
         """
@@ -28,7 +29,7 @@ class Burbnbot:
                 connected devices
         """
 
-        self.logger.add("log/{}.log".format(str(datetime.date.today())), level="DEBUG")
+        self.lg.add("log/{}.log".format(str(datetime.date.today())), level="DEBUG")
 
         if device is None:
             parser = argparse.ArgumentParser(add_help=True)
@@ -43,7 +44,7 @@ class Burbnbot:
         if len(self.d.app_list("com.instagram.android")) == 0:
             msg = "Instagram not installed."
             print(bad(msg))
-            self.logger.error(msg)
+            self.lg.error(msg)
             quit()
 
         self.d.app_stop_all()
@@ -59,14 +60,14 @@ class Burbnbot:
             if self.d(resourceId=ri).get_text() == "You've Been Logged Out":
                 msg = "You've Been Logged Out. Please log back in."
                 print(bad(msg))
-                self.logger.error(msg)
+                self.lg.error(msg)
                 self.d.app_clear(package_name="com.instagram.android")
                 quit()
 
         if self.d(resourceId="com.instagram.android:id/login_username").exists:
             msg = "You've Been Logged Out. Please log back in."
             print(bad(msg))
-            self.logger.error(msg)
+            self.lg.error(msg)
             self.d.app_clear(package_name="com.instagram.android")
             quit()
 
@@ -154,7 +155,7 @@ class Burbnbot:
             self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
             self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
         except uiautomator2.exceptions as e:
-            self.logger.error(e)
+            self.lg.error(e)
             return False
         else:
             return True
@@ -224,7 +225,7 @@ class Burbnbot:
             self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
             r = self.d.xpath("//*[@resource-id='android:id/list']//*[@class='android.widget.FrameLayout'][2]").exists
         except uiautomator2.exceptions as e:
-            self.logger.error(e)
+            self.lg.error(e)
             return False
         else:
             return r
@@ -253,7 +254,7 @@ class Burbnbot:
             self.wait(5)
             self.d(resourceId='com.instagram.android:id/image_button').click()
         except uiautomator2.exceptions as e:
-            self.logger.error(e)
+            self.lg.error(e)
             return False
         else:
             return True
@@ -284,7 +285,7 @@ class Burbnbot:
                     return False
             return r
         except uiautomator2.exceptions as e:
-            self.logger.error(e)
+            self.lg.error(e)
             return False
         else:
             return r
@@ -315,7 +316,7 @@ class Burbnbot:
 
             r = self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == "#{}".format(tag)
         except uiautomator2.exceptions as e:
-            self.logger.error(e)
+            self.lg.error(e)
             return False
         else:
             return r
@@ -352,7 +353,7 @@ class Burbnbot:
                     self.__scroll_elements_vertically( self.d(resourceId="com.instagram.android:id/follow_list_container"))
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
-                    self.logger.exception()
+                    self.lg.exception()
                     pass
 
                 if self.d(text="Suggestions for you").exists:
@@ -388,7 +389,7 @@ class Burbnbot:
                     self.d(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
-                    self.logger.exception()
+                    self.lg.exception()
                     pass
 
                 print(run("Followers #: {}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
@@ -431,7 +432,7 @@ class Burbnbot:
                 quit(1)
         msg = "Element not found: {} You probably don't have to worry about.".format(e.data)
         print(bad(msg))
-        self.logger.error(e)
+        self.lg.error(e)
 
         # sometimes a wrong click open a different screen
         if (self.d(resourceId="com.instagram.android:id/profile_header_avatar_container_top_left_stub").exists or
@@ -440,7 +441,7 @@ class Burbnbot:
                  self.d(resourceId="com.instagram.android:id/action_bar_new_title_container").exists):
             msg = "It looks like we're in the wrong place, let's try to get back."
             print(bad(msg))
-            self.logger.error(msg)
+            self.lg.error(msg)
             self.d.press("back")
 
     def unfollow(self, username: str):
@@ -522,10 +523,10 @@ class Burbnbot:
                     self.__scrool_elements_horizontally(self.d(resourceId="com.instagram.android:id/row_text"))
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
-                    self.logger.exception()
+                    self.lg.exception()
                     pass
         except uiautomator2.exceptions as e:
-            self.logger.error(e)
+            self.lg.error(e)
             return False
         else:
             return list(dict.fromkeys(list_users))
@@ -547,7 +548,7 @@ class Burbnbot:
             fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
 
         except uiautomator2.exceptions as e:
-            self.logger.error(e)
+            self.lg.error(e)
             return []
         else:
             return list(dict.fromkeys(fh))
