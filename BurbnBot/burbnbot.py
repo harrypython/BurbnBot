@@ -19,6 +19,7 @@ class Burbnbot:
     d: uiautomator2.Device
     version_app: str = "158.0.0.30.123"
     version_android: str = "9"
+    logger: logger
 
     def __init__(self, device: str = None) -> None:
         """
@@ -27,7 +28,7 @@ class Burbnbot:
                 connected devices
         """
 
-        logger.add("log/{}.log".format(str(datetime.date.today())), level="DEBUG")
+        self.logger.add("log/{}.log".format(str(datetime.date.today())), level="DEBUG")
 
         if device is None:
             parser = argparse.ArgumentParser(add_help=True)
@@ -42,7 +43,7 @@ class Burbnbot:
         if len(self.d.app_list("com.instagram.android")) == 0:
             msg = "Instagram not installed."
             print(bad(msg))
-            logger.error(msg)
+            self.logger.error(msg)
             quit()
 
         self.d.app_stop_all()
@@ -58,14 +59,14 @@ class Burbnbot:
             if self.d(resourceId=ri).get_text() == "You've Been Logged Out":
                 msg = "You've Been Logged Out. Please log back in."
                 print(bad(msg))
-                logger.error(msg)
+                self.logger.error(msg)
                 self.d.app_clear(package_name="com.instagram.android")
                 quit()
 
         if self.d(resourceId="com.instagram.android:id/login_username").exists:
             msg = "You've Been Logged Out. Please log back in."
             print(bad(msg))
-            logger.error(msg)
+            self.logger.error(msg)
             self.d.app_clear(package_name="com.instagram.android")
             quit()
 
@@ -146,11 +147,17 @@ class Burbnbot:
             return MediaType.VIDEO
         return MediaType.PHOTO
 
-    def open_home_feed(self):
-        print(good("Opening home feed"))
-        self.__reset_app()
-        self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
-        self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
+    def open_home_feed(self) -> bool:
+        try:
+            print(good("Opening home feed"))
+            self.__reset_app()
+            self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
+            self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
+        except uiautomator2.exceptions as e:
+            self.logger.error(e)
+            return False
+        else:
+            return True
 
     def get_users_liked_by_you(self, amount):
         self.d(resourceId="com.instagram.android:id/profile_tab").click()
@@ -168,9 +175,11 @@ class Burbnbot:
                 for p in c:
                     p.click()
                     if self.d(resourceId="com.instagram.android:id/button", text="Follow").exists:
-                        u.append(self.d(resourceId="com.instagram.android:id/row_feed_photo_profile_name").get_text().split()[0])
+                        u.append(self.d(
+                            resourceId="com.instagram.android:id/row_feed_photo_profile_name").get_text().split()[0])
                     self.d.press("back")
-            self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier"))
+            self.__scroll_elements_vertically(
+                self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier"))
             while self.d(resourceId="com.instagram.android:id/row_load_more_button").exists:
                 self.d(resourceId="com.instagram.android:id/row_load_more_button").click()
                 self.wait()
@@ -209,11 +218,16 @@ class Burbnbot:
         Returns:
             bool: The return value. True for success, False otherwise.
         """
-        url = "https://www.instagram.com/p/{}/".format(media_code)
-        print(good("Opening post {}.".format(url)))
-        self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-        return self.d.xpath(
-            "//*[@resource-id='android:id/list']//*[@class='android.widget.FrameLayout'][2]").exists
+        try:
+            url = "https://www.instagram.com/p/{}/".format(media_code)
+            print(good("Opening post {}.".format(url)))
+            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+            r = self.d.xpath("//*[@resource-id='android:id/list']//*[@class='android.widget.FrameLayout'][2]").exists
+        except uiautomator2.exceptions as e:
+            self.logger.error(e)
+            return False
+        else:
+            return r
 
     def open_location(self, locationcode: int, tab: str = "Top"):
         """Open a location
@@ -225,18 +239,24 @@ class Burbnbot:
         Returns:
             bool: The return value. True for success, False otherwise.
         """
-        print(good("Opening location code: {}.".format(locationcode)))
-        self.__reset_app()
-        url = "https://www.instagram.com/explore/locations/{}/".format(locationcode)
-        print(good("Opening location {}.".format(url)))
-        self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-        self.wait(5)
-        if tab is not None:
-            while not self.d(resourceId="com.instagram.android:id/tab_layout").child_by_text(tab).exists:
-                self.wait(1)
-            self.d(resourceId="com.instagram.android:id/tab_layout").child_by_text(tab).click()
-        self.wait(5)
-        self.d(resourceId='com.instagram.android:id/image_button').click()
+        try:
+            print(good("Opening location code: {}.".format(locationcode)))
+            self.__reset_app()
+            url = "https://www.instagram.com/explore/locations/{}/".format(locationcode)
+            print(good("Opening location {}.".format(url)))
+            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+            self.wait(5)
+            if tab is not None:
+                while not self.d(resourceId="com.instagram.android:id/tab_layout").child_by_text(tab).exists:
+                    self.wait(1)
+                self.d(resourceId="com.instagram.android:id/tab_layout").child_by_text(tab).click()
+            self.wait(5)
+            self.d(resourceId='com.instagram.android:id/image_button').click()
+        except uiautomator2.exceptions as e:
+            self.logger.error(e)
+            return False
+        else:
+            return True
 
     def open_profile(self, username: str, open_post: bool = False) -> bool:
         """Open a profile
@@ -248,22 +268,28 @@ class Burbnbot:
         Returns:
             bool: The return value. True for success, False otherwise.
         """
-        url = "https://www.instagram.com/{}/".format(username)
-        print(good("Opening profile {}.".format(url)))
-        self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-        self.wait()
-        r = self.d(resourceId='com.instagram.android:id/row_profile_header_imageview').exists
-        if open_post:
-            if self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
-                    className="android.widget.ImageView").exists:
-                self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
-                    className="android.widget.ImageView").click()
-            else:
-                print(bad("Looks like this profile have zero posts."))
-                return False
-        return r
+        try:
+            url = "https://www.instagram.com/{}/".format(username)
+            print(good("Opening profile {}.".format(url)))
+            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+            self.wait()
+            r = self.d(resourceId='com.instagram.android:id/row_profile_header_imageview').exists
+            if open_post:
+                if self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
+                        className="android.widget.ImageView").exists:
+                    self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
+                        className="android.widget.ImageView").click()
+                else:
+                    print(bad("Looks like this profile have zero posts."))
+                    return False
+            return r
+        except uiautomator2.exceptions as e:
+            self.logger.error(e)
+            return False
+        else:
+            return r
 
-    def open_tag(self, tag: str, tab: str = "Recent"):
+    def open_tag(self, tag: str, tab: str = "Recent") -> bool:
         """Search a hashtag
 
         Args:
@@ -273,18 +299,26 @@ class Burbnbot:
         Returns:
             bool: The return value. True for success, False otherwise.
         """
-        print(good("Opening hashtag: "), green(tag))
-        self.__reset_app()
-        while not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").exists:
-            url = "https://www.instagram.com/explore/tags/{}/".format(tag)
-            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+        try:
+            print(good("Opening hashtag: "), green(tag))
+            self.__reset_app()
+            while not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").exists:
+                url = "https://www.instagram.com/explore/tags/{}/".format(tag)
+                self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
 
-        self.wait()
-        self.d.xpath('//*[@text="{}"]'.format(tab)).click()
-        self.wait()
+            self.wait()
+            self.d.xpath('//*[@text="{}"]'.format(tab)).click()
+            self.wait()
 
-        if self.d.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
-            self.d(resourceId='com.instagram.android:id/image_button').click()
+            if self.d.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
+                self.d(resourceId='com.instagram.android:id/image_button').click()
+
+            r = self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == "#{}".format(tag)
+        except uiautomator2.exceptions as e:
+            self.logger.error(e)
+            return False
+        else:
+            return r
 
     def __double_click(self, e: uiautomator2.UiObject):
         """Double click center the element :param e: Element
@@ -295,7 +329,7 @@ class Burbnbot:
         x, y = e.center()
         self.d.double_click(x, y, duration=0.1)
 
-    def get_following_list(self):
+    def get_following_list(self) -> list:
         list_following = []
         self.__reset_app()
         self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
@@ -315,28 +349,28 @@ class Burbnbot:
 
                 try:
                     list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
-                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
+                    self.__scroll_elements_vertically( self.d(resourceId="com.instagram.android:id/follow_list_container"))
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
-                    logger.exception()
+                    self.logger.exception()
                     pass
 
                 if self.d(text="Suggestions for you").exists:
-                    list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                    list_following = list_following + [elem.get_text() for elem in self.d(
+                        resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                     break
 
                 print(run("Following: #{}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
             print(good("Done"), "\r")
         return list(dict.fromkeys(list_following))
 
-    def get_followers_list(self):
+    def get_followers_list(self) -> list:
         self.__reset_app()
         list_following = []
         self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
         self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
         print(good("Opening followers list"))
-        followers_count = self.__str_to_number(
-            self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
+        followers_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
         print(good("{} followers".format(followers_count)))
         self.d(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
         self.wait()
@@ -344,20 +378,17 @@ class Burbnbot:
             t = 0
             while t < 5:
                 try:
-                    list_following = list_following + [elem.get_text() for elem in self.d(
-                        resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
-                    self.__scroll_elements_vertically(
-                        self.d(resourceId="com.instagram.android:id/follow_list_container"))
+                    list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
                     self.wait()
-                    if list_following[-1] == self.d(
-                            resourceId="com.instagram.android:id/follow_list_username").get_text():
+                    if list_following[-1] == self.d(resourceId="com.instagram.android:id/follow_list_username").get_text():
                         t += 1
                     else:
                         t = 0
                     self.d(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
-                    logger.exception()
+                    self.logger.exception()
                     pass
 
                 print(run("Followers #: {}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
@@ -380,12 +411,10 @@ class Burbnbot:
             self.wait(i=random.randint(5, 10), muted=True)
             try:
                 if self.d(description="Like", className="android.widget.ImageView").exists:
-                    lk = lk + len([self.__click_n_wait(e) for e in
-                                   self.d(description="Like", className="android.widget.ImageView")])
+                    lk = lk + len([self.__click_n_wait(e) for e in self.d(description="Like", className="android.widget.ImageView")])
                     print(run("Liking: {}/{}".format(lk, amount)), end="\r", flush=True)
                 else:
-                    self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up",
-                                                                                              steps=15)
+                    self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up", steps=15)
             except uiautomator2.UiObjectNotFoundError as e:
                 self.__not_found_like(e)
                 pass
@@ -400,8 +429,9 @@ class Burbnbot:
                 print(bad("ERROR: TOO MANY REQUESTS, TAKE A BREAK HAMILTON."))
                 self.d.app_clear(package_name="com.instagram.android")
                 quit(1)
-
-        print(bad("Element not found: {} You probably don't have to worry about.".format(e.data)))
+        msg = "Element not found: {} You probably don't have to worry about.".format(e.data)
+        print(bad(msg))
+        self.logger.error(e)
 
         # sometimes a wrong click open a different screen
         if (self.d(resourceId="com.instagram.android:id/profile_header_avatar_container_top_left_stub").exists or
@@ -410,7 +440,7 @@ class Burbnbot:
                  self.d(resourceId="com.instagram.android:id/action_bar_new_title_container").exists):
             msg = "It looks like we're in the wrong place, let's try to get back."
             print(bad(msg))
-            logger.error(msg)
+            self.logger.error(msg)
             self.d.press("back")
 
     def unfollow(self, username: str):
@@ -482,38 +512,45 @@ class Burbnbot:
     def get_notification_users(self) -> list:
         """return the last users who interacted with you"""
         list_users = []
-        self.d(resourceId="com.instagram.android:id/notification").click()
-        self.d(resourceId="com.instagram.android:id/notification").click()
-        while not self.d(text="Suggestions for you").exists:
-            try:
-                list_users = list_users + [e.get_text().split()[0] for e in
-                                           self.d(resourceId="com.instagram.android:id/row_text")]
-                self.__scrool_elements_horizontally(self.d(resourceId="com.instagram.android:id/row_text"))
-            except Exception as e:
-                print(bad("Error: {}.".format(e.message)))
-                logger.exception()
-                pass
-        return list(dict.fromkeys(list_users))
+        try:
+            self.d(resourceId="com.instagram.android:id/notification").click()
+            self.d(resourceId="com.instagram.android:id/notification").click()
+            while not self.d(text="Suggestions for you").exists:
+                try:
+                    list_users = list_users + [e.get_text().split()[0] for e in
+                                               self.d(resourceId="com.instagram.android:id/row_text")]
+                    self.__scrool_elements_horizontally(self.d(resourceId="com.instagram.android:id/row_text"))
+                except Exception as e:
+                    print(bad("Error: {}.".format(e.message)))
+                    self.logger.exception()
+                    pass
+        except uiautomator2.exceptions as e:
+            self.logger.error(e)
+            return False
+        else:
+            return list(dict.fromkeys(list_users))
 
     def get_followed_hashtags(self) -> list:
         """return the hashtags followed by you"""
-        self.__reset_app()
-        fh = []
-        self.d(resourceId="com.instagram.android:id/profile_tab").click()
-        self.d(resourceId="com.instagram.android:id/profile_tab").click()
-        self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click()
-        self.d(resourceId="com.instagram.android:id/row_hashtag_image").click()
-        self.wait()
-        while not self.d(resourceId="com.instagram.android:id/row_header_textview", text="Suggestions").exists:
-            try:
+        try:
+            self.__reset_app()
+            fh = []
+            self.d(resourceId="com.instagram.android:id/profile_tab").click()
+            self.d(resourceId="com.instagram.android:id/profile_tab").click()
+            self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click()
+            self.d(resourceId="com.instagram.android:id/row_hashtag_image").click()
+            self.wait()
+            while not self.d(resourceId="com.instagram.android:id/row_header_textview", text="Suggestions").exists:
                 fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
                 self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_user_imageview"))
-            except Exception as e:
-                # print(bad("Error: {}.".format(e.message)))
-                logger.exception()
-                pass
-        fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
-        return list(dict.fromkeys(fh))
+
+            fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
+
+        except uiautomator2.exceptions as e:
+            self.logger.error(e)
+            return []
+        else:
+            return list(dict.fromkeys(fh))
 
     def logout_other_devices(self):
         self.d(resourceId="com.instagram.android:id/profile_tab").click()
