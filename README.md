@@ -68,35 +68,35 @@ for user in [u for u in users_following if u not in users_followers]:
 # Open hashtag's feed 'creative',
 # move to Recent tab and
 # click in the first picture
-bot.open_tag(tag="creative", tab="Recent")
-
-# swipe and like 5 pictures do feed opened before
-bot.like_n_swipe(5)
+if bot.open_tag(tag="creative", tab="Recent"):
+    # swipe and like 5 pictures do feed opened before
+    bot.like_n_swipe(5)
 
 # open the profile "badgalriri"
-bot.open_profile(username="badgalriri", open_post=True)
-# swipe and like 3 pictures do feed opened before
-bot.like_n_swipe(3)
+if bot.open_profile(username="badgalriri", open_post=True):
+    # swipe and like 3 pictures do feed opened before
+    bot.like_n_swipe(3)
 
-# open the post https://www.instagram.com/p/CI9ivzMH1Rk/
-bot.open_media(media_code="CI9ivzMH1Rk")
-bot.like_n_swipe()
+# open the post https://www.instagram.com/p/B_nrbNPndh0/
+if bot.open_media(media_code="B_nrbNPndh0"):
+    bot.like_n_swipe()
 
 # open home feed and like 15 posts
-bot.open_home_feed()
-bot.like_n_swipe(15)
+if bot.open_home_feed():
+    bot.like_n_swipe(15)
 
 # return the last users who interacted with you
 notification_users = bot.get_notification_users()
 for u in notification_users:
-    bot.open_profile(username=u)
-    bot.like_n_swipe(1)  # like the last post from users who interacted with you
+    if bot.open_profile(username=u):
+        bot.like_n_swipe(1)  # like the last post from users who interacted with you
 
 # return the hashtags followed by you
-followed_hashtags = bot.get_followed_hashtags()  
+followed_hashtags = bot.get_followed_hashtags()
 for hashtag in followed_hashtags:
-    bot.open_tag(tag=hashtag, tab="Recent")  # open the hashtag feed in the 'Recent' tab
-    bot.like_n_swipe(amount=10)  # like 10 posts
+    if bot.open_tag(tag=hashtag, tab="Recent"):  # open the hashtag feed in the 'Recent' tab
+        bot.like_n_swipe(amount=10)  # like 10 posts
+
 
 ```  
   
