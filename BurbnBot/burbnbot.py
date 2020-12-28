@@ -18,7 +18,7 @@ class MediaType(object):
 
 class Burbnbot:
     d: uiautomator2.Device
-    version_app: str = "158.0.0.30.123"
+    version_app: str = "169.3.0.30.135"
     version_android: str = "9"
     lg: loguru.logger = loguru.logger
 
@@ -117,13 +117,17 @@ class Burbnbot:
         Args:
             e (uiautomator2.UiObject):
         """
-        if e.count > 2:
-            fx = e[-1].info['visibleBounds']['right'] / 2
-            fy = e[-1].info['visibleBounds']['top']
+        if e.exists and e.count > 1:
+            i = e.count
+            fx = e[i-1].info['visibleBounds']['right'] / 2
+            fy = e[i-1].info['visibleBounds']['top']
             # tx = e[0].info['visibleBounds']['left']
             tx = fx
             ty = e[0].info['visibleBounds']['bottom']
-            self.d.swipe(fx, fy, tx, ty, duration=0)
+            if fy == ty:
+                e.swipe("up")
+            else:
+                self.d.swipe(fx, fy, tx, ty, duration=1)
             self.d.dump_hierarchy()
 
     def __scrool_elements_horizontally(self, e: uiautomator2.UiObject):
@@ -346,11 +350,16 @@ class Burbnbot:
         self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
         self.wait()
         if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
+            fx = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['right']/2
+            fy = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['top']
+            tx = fx
+            ty = self.d(resourceId="com.instagram.android:id/row_search_edit_text").info['visibleBounds']['bottom']
+            self.d.swipe(fx, fy, tx, ty, duration=1)
             while True:
 
                 try:
                     list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
-                    self.__scroll_elements_vertically( self.d(resourceId="com.instagram.android:id/follow_list_container"))
+                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
                     self.lg.exception()
