@@ -245,8 +245,8 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         try:
-            print(good("Opening location code: {}.".format(locationcode)))
             self.__reset_app()
+            print(good("Opening location code: {}.".format(locationcode)))
             url = "https://www.instagram.com/explore/locations/{}/".format(locationcode)
             print(good("Opening location {}.".format(url)))
             self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
@@ -280,6 +280,7 @@ class Burbnbot:
             self.wait()
             r = self.d(resourceId='com.instagram.android:id/row_profile_header_imageview').exists
             if open_post:
+                self.wait(3)
                 if self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
                         className="android.widget.ImageView").exists:
                     self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
@@ -307,23 +308,52 @@ class Burbnbot:
         try:
             print(good("Opening hashtag: "), green(tag))
             self.__reset_app()
-            while not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").exists:
+            while not self.d(resourceId="com.instagram.android:id/tab_layout").exists:
                 url = "https://www.instagram.com/explore/tags/{}/".format(tag)
                 self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+                self.wait(5)
 
-            self.wait()
             self.d.xpath('//*[@text="{}"]'.format(tab)).click()
             self.wait()
 
             if self.d.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
                 self.d(resourceId='com.instagram.android:id/image_button').click()
 
-            r = self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == "#{}".format(tag)
         except uiautomator2.exceptions as e:
             self.lg.error(e)
             return False
         else:
-            return r
+            return True
+
+    def get_least_interacted(self):
+        lu = []
+        i = 0
+        last_username = ""
+        try:
+            print(good("Opening profiles less interacted."))
+            self.__reset_app()
+            while not self.d(resourceId="com.instagram.android:id/action_bar_title", text="Least Interacted With").exists:
+                self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+                self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+                self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
+                self.d(resourceId="com.instagram.android:id/title", text="Least Interacted With").click()
+
+            self.wait(10)
+
+            while i < 3 and self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
+                lu = lu + [e.get_text() for e in self.d(resourceId="com.instagram.android:id/follow_list_username")]
+                self.wait()
+                self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container", className="android.widget.LinearLayout"))
+
+                if last_username == lu[-1]:
+                    i += 1
+                else:
+                    last_username = lu[-1]
+
+        except uiautomator2.exceptions as e:
+            self.lg.error(e)
+        else:
+            return list(dict.fromkeys(lu))
 
     def __double_click(self, e: uiautomator2.UiObject):
         """Double click center the element :param e: Element
@@ -409,7 +439,7 @@ class Burbnbot:
     def __click_n_wait(elem: uiautomator2.UiObject):
         if elem.exists:
             elem.click()
-            sleep(random.randint(5, 10))
+            sleep(random.randint(3, 5))
 
     def like_n_swipe(self, amount: int = 1):
         """
@@ -419,6 +449,9 @@ class Burbnbot:
         lk = 0
         while lk < amount:
             self.wait(i=random.randint(5, 10), muted=True)
+            if self.d(resourceId="com.instagram.android:id/secondary_label").exists and \
+                    self.d(resourceId="com.instagram.android:id/secondary_label").get_text() == "Sponsored":
+                lk = lk - 1
             try:
                 if self.d(description="Like", className="android.widget.ImageView").exists:
                     lk = lk + len([self.__click_n_wait(e) for e in self.d(description="Like", className="android.widget.ImageView")])
