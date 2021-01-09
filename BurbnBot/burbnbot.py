@@ -127,8 +127,7 @@ class Burbnbot:
             if fy == ty:
                 e.swipe("up")
             else:
-                self.d.swipe(fx, fy, tx, ty, duration=1)
-            self.d.dump_hierarchy()
+                self.d.swipe(fx, fy, tx, ty, duration=0)
 
     def __scrool_elements_horizontally(self, e: uiautomator2.UiObject):
         """take the last element informed in e and scroll to the first element
@@ -158,7 +157,7 @@ class Burbnbot:
             self.__reset_app()
             self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
             self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
             return False
         else:
@@ -228,7 +227,7 @@ class Burbnbot:
             print(good("Opening post {}.".format(url)))
             self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
             r = self.d.xpath("//*[@resource-id='android:id/list']//*[@class='android.widget.FrameLayout'][2]").exists
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
             return False
         else:
@@ -257,7 +256,7 @@ class Burbnbot:
                 self.d(resourceId="com.instagram.android:id/tab_layout").child_by_text(tab).click()
             self.wait(5)
             self.d(resourceId='com.instagram.android:id/image_button').click()
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
             return False
         else:
@@ -289,7 +288,7 @@ class Burbnbot:
                     print(bad("Looks like this profile have zero posts."))
                     return False
             return r
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
             return False
         else:
@@ -319,7 +318,7 @@ class Burbnbot:
             if self.d.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
                 self.d(resourceId='com.instagram.android:id/image_button').click()
 
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
             return False
         else:
@@ -350,7 +349,7 @@ class Burbnbot:
                 else:
                     last_username = lu[-1]
 
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
         else:
             return list(dict.fromkeys(lu))
@@ -384,7 +383,7 @@ class Burbnbot:
             fy = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['top']
             tx = fx
             ty = self.d(resourceId="com.instagram.android:id/row_search_edit_text").info['visibleBounds']['bottom']
-            self.d.swipe(fx, fy, tx, ty, duration=1)
+            self.d.swipe(fx, fy, tx, ty, duration=0)
             while True:
 
                 try:
@@ -461,7 +460,6 @@ class Burbnbot:
             except uiautomator2.UiObjectNotFoundError as e:
                 self.__not_found_like(e)
                 pass
-            self.d.dump_hierarchy()
 
         sys.stdout.write("\033[K")  # Clear to the end of line
         print(good("Liked: {}/{}".format(lk, amount)))
@@ -567,7 +565,7 @@ class Burbnbot:
                     print(bad("Error: {}.".format(e.message)))
                     self.lg.exception()
                     pass
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
             return False
         else:
@@ -584,12 +582,14 @@ class Burbnbot:
             self.d(resourceId="com.instagram.android:id/row_hashtag_image").click()
             self.wait()
             while not self.d(resourceId="com.instagram.android:id/row_header_textview", text="Suggestions").exists:
-                fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
+                fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following") if self.d(resourceId="com.instagram.android:id/follow_button", text="Following").exists]
                 self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_user_imageview"))
+                if not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == "Hashtags":
+                    self.d.press("back")
 
-            fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following")]
+            fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following") if self.d(resourceId="com.instagram.android:id/follow_button", text="Following").exists]
 
-        except uiautomator2.exceptions as e:
+        except Exception as e:
             self.lg.error(e)
             return []
         else:
@@ -618,4 +618,3 @@ class Burbnbot:
                 )
             )
             self.wait()
-            self.d.dump_hierarchy()
