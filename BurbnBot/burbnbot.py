@@ -78,6 +78,10 @@ class Burbnbot:
         self.d.app_start(package_name="com.instagram.android")
         self.wait()
 
+    def __treat_exception(self, e: Exception):
+        self.d.screenshot("log/{}.jpg".format(datetime.datetime.now().strftime("%Y-%m-%d_-_%H_%M_%S-%f%z")))
+        self.lg.exception(e)
+
     def wait(self, i: int = None, muted=False):
         """Wait the device :param i: number of seconds to wait, if None will be
         a random number between 1 and 3 :type i: int
@@ -365,74 +369,85 @@ class Burbnbot:
 
     def get_following_list(self) -> list:
         list_following = []
-        self.__reset_app()
-        self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
-        self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
-        print(good("Opening following list"))
-        following_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
-        print(good("{} followings".format(following_count)))
-        self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
-        self.wait()
-        while not self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
-            self.d(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
+        try:
+            self.__reset_app()
+            self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+            self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+            print(good("Opening following list"))
+            following_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
+            print(good("{} followings".format(following_count)))
+            self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
             self.wait()
-        self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
-        self.wait()
-        if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
-            fx = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['right']/2
-            fy = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['top']
-            tx = fx
-            ty = self.d(resourceId="com.instagram.android:id/row_search_edit_text").info['visibleBounds']['bottom']
-            self.d.swipe(fx, fy, tx, ty, duration=0)
-            while True:
+            while not self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
+                self.d(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
+                self.wait()
+            self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
+            self.wait()
+            if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
+                fx = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['right']/2
+                fy = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['top']
+                tx = fx
+                ty = self.d(resourceId="com.instagram.android:id/row_search_edit_text").info['visibleBounds']['bottom']
+                self.d.swipe(fx, fy, tx, ty, duration=0)
+                while True:
 
-                try:
-                    list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                    try:
+                        if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
+                            if self.d(resourceId="com.instagram.android:id/follow_list_username").count > 0:
+                                for elem in self.d(resourceId="com.instagram.android:id/follow_list_username"):
+                                    list_following.append(elem.get_text())
+                    except uiautomator2.exceptions.UiObjectNotFoundError as nfe:
+                        pass
                     self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
-                except Exception as e:
-                    print(bad("Error: {}.".format(e.message)))
-                    self.lg.exception()
-                    pass
 
-                if self.d(text="Suggestions for you").exists:
-                    list_following = list_following + [elem.get_text() for elem in self.d(
-                        resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
-                    break
+                    if self.d(text="Suggestions for you").exists:
+                        list_following = list_following + [elem.get_text() for elem in self.d(
+                            resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                        break
 
-                print(run("Following: #{}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
-            print(good("Done"), "\r")
+                    print(run("Following: #{}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
+                print(good("Done"), "\r")
+        except Exception as e:
+            self.__treat_exception(e)
         return list(dict.fromkeys(list_following))
 
     def get_followers_list(self) -> list:
-        self.__reset_app()
-        list_following = []
-        self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
-        self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
-        print(good("Opening followers list"))
-        followers_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
-        print(good("{} followers".format(followers_count)))
-        self.d(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
-        self.wait()
-        if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
-            t = 0
-            while t < 5:
-                try:
-                    list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
-                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
-                    self.wait()
-                    if list_following[-1] == self.d(resourceId="com.instagram.android:id/follow_list_username").get_text():
-                        t += 1
-                    else:
-                        t = 0
-                    self.d(resourceId="com.instagram.android:id/row_load_more_button").click_exists(timeout=2)
-                except Exception as e:
-                    print(bad("Error: {}.".format(e.message)))
-                    self.lg.exception()
-                    pass
+        list_followers = []
+        try:
+            self.__reset_app()
+            self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
+            self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
+            print(good("Opening followers list"))
+            followers_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
+            print(good("{} followers".format(followers_count)))
+            self.d(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
+            self.wait()
+            if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
+                while True:
+                    try:
+                        if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
+                            if self.d(resourceId="com.instagram.android:id/follow_list_username").count > 0:
+                                for elem in self.d(resourceId="com.instagram.android:id/follow_list_username"):
+                                    list_followers.append(elem.get_text())
+                    except uiautomator2.exceptions.UiObjectNotFoundError as nfe:
+                        pass
 
-                print(run("Followers #: {}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
-            print(good("Done"), "\r")
-        return list(dict.fromkeys(list_following))
+                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
+
+                    if self.d(description="Retry").exists:
+                        self.wait(10)
+                        self.d(description="Retry").click()
+
+                    if self.d(resourceId="com.instagram.android:id/row_header_textview").exists:
+                        if self.d(resourceId="com.instagram.android:id/row_header_textview").get_text() == "Suggestions for you":
+                            break
+
+                    print(run("Followers #: {}".format(len(list(dict.fromkeys(list_followers))))), end="\r", flush=True)
+                print(good("Done"), "\r")
+        except Exception as e:
+            self.__treat_exception(e)
+
+        return list(dict.fromkeys(list_followers))
 
     @staticmethod
     def __click_n_wait(elem: uiautomator2.UiObject):
@@ -563,7 +578,7 @@ class Burbnbot:
                     self.__scrool_elements_horizontally(self.d(resourceId="com.instagram.android:id/row_text"))
                 except Exception as e:
                     print(bad("Error: {}.".format(e.message)))
-                    self.lg.exception()
+                    self.__treat_exception(e)
                     pass
         except Exception as e:
             self.lg.error(e)
