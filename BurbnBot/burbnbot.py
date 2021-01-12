@@ -18,7 +18,7 @@ class MediaType(object):
 
 class Burbnbot:
     d: uiautomator2.Device
-    version_app: str = "169.3.0.30.135"
+    version_app: str = "158.0.0.30.123"
     version_android: str = "9"
     lg: loguru.logger = loguru.logger
 
@@ -461,20 +461,25 @@ class Burbnbot:
             amount (int): number of posts to like
         """
         lk = 0
-        while lk < amount:
-            self.wait(i=random.randint(5, 10), muted=True)
-            if self.d(resourceId="com.instagram.android:id/secondary_label").exists and \
-                    self.d(resourceId="com.instagram.android:id/secondary_label").get_text() == "Sponsored":
-                lk = lk - 1
-            try:
-                if self.d(description="Like", className="android.widget.ImageView").exists:
-                    lk = lk + len([self.__click_n_wait(e) for e in self.d(description="Like", className="android.widget.ImageView")])
-                    print(run("Liking: {}/{}".format(lk, amount)), end="\r", flush=True)
-                else:
-                    self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up", steps=15)
-            except uiautomator2.UiObjectNotFoundError as e:
-                self.__not_found_like(e)
-                pass
+        try:
+            self.__reset_app()
+            while lk < amount:
+                self.wait(i=random.randint(5, 10), muted=True)
+                if self.d(resourceId="com.instagram.android:id/secondary_label").exists and \
+                        self.d(resourceId="com.instagram.android:id/secondary_label").get_text() == "Sponsored":
+                    lk = lk - 1
+                try:
+                    if self.d(description="Like", className="android.widget.ImageView").exists:
+                        lk = lk + len([self.__click_n_wait(e) for e in self.d(description="Like", className="android.widget.ImageView")])
+                        print(run("Liking: {}/{}".format(lk, amount)), end="\r", flush=True)
+                    else:
+                        self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up", steps=15)
+                except uiautomator2.UiObjectNotFoundError as e:
+                    self.__not_found_like(e)
+                    pass
+        except Exception as e:
+            self.__treat_exception(e)
+            return None
 
         sys.stdout.write("\033[K")  # Clear to the end of line
         print(good("Liked: {}/{}".format(lk, amount)))
