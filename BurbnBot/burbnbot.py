@@ -123,8 +123,8 @@ class Burbnbot:
         """
         if e.exists and e.count > 1:
             i = e.count
-            fx = e[i-1].info['visibleBounds']['right'] / 2
-            fy = e[i-1].info['visibleBounds']['top']
+            fx = e[i - 1].info['visibleBounds']['right'] / 2
+            fy = e[i - 1].info['visibleBounds']['top']
             # tx = e[0].info['visibleBounds']['left']
             tx = fx
             ty = e[0].info['visibleBounds']['bottom']
@@ -218,7 +218,7 @@ class Burbnbot:
 
     def open_media(self, media_code: str) -> bool:
         """Open a post by the code eg. in
-        https://www.instagram.com/p/CFr6-Q-sAFi/ the code is CFr6-Q-sAFi
+        https://www.instagram.com/p/B_qh-EYnrjW/ the code is B_qh-EYnrjW
 
         Args:
             media_code (str): media code of the post
@@ -295,8 +295,6 @@ class Burbnbot:
         except Exception as e:
             self.lg.error(e)
             return False
-        else:
-            return r
 
     def open_tag(self, tag: str, tab: str = "Recent") -> bool:
         """Search a hashtag
@@ -335,7 +333,8 @@ class Burbnbot:
         try:
             print(good("Opening profiles less interacted."))
             self.__reset_app()
-            while not self.d(resourceId="com.instagram.android:id/action_bar_title", text="Least Interacted With").exists:
+            while not self.d(resourceId="com.instagram.android:id/action_bar_title",
+                             text="Least Interacted With").exists:
                 self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
                 self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
                 self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
@@ -346,7 +345,8 @@ class Burbnbot:
             while i < 3 and self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                 lu = lu + [e.get_text() for e in self.d(resourceId="com.instagram.android:id/follow_list_username")]
                 self.wait()
-                self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container", className="android.widget.LinearLayout"))
+                self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container",
+                                                         className="android.widget.LinearLayout"))
 
                 if last_username == lu[-1]:
                     i += 1
@@ -374,7 +374,8 @@ class Burbnbot:
             self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
             self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
             print(good("Opening following list"))
-            following_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
+            following_count = self.__str_to_number(
+                self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
             print(good("{} followings".format(following_count)))
             self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
             self.wait()
@@ -384,8 +385,9 @@ class Burbnbot:
             self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
             self.wait()
             if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
-                fx = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['right']/2
-                fy = self.d(resourceId="com.instagram.android:id/sorting_entry_row_option").info['visibleBounds']['top']
+                rscid = "com.instagram.android:id/sorting_entry_row_option"
+                fx = self.d(resourceId=rscid).info['visibleBounds']['right'] / 2
+                fy = self.d(resourceId=rscid).info['visibleBounds']['top']
                 tx = fx
                 ty = self.d(resourceId="com.instagram.android:id/row_search_edit_text").info['visibleBounds']['bottom']
                 self.d.swipe(fx, fy, tx, ty, duration=0)
@@ -396,9 +398,10 @@ class Burbnbot:
                             if self.d(resourceId="com.instagram.android:id/follow_list_username").count > 0:
                                 for elem in self.d(resourceId="com.instagram.android:id/follow_list_username"):
                                     list_following.append(elem.get_text())
-                    except uiautomator2.exceptions.UiObjectNotFoundError as nfe:
+                    except uiautomator2.exceptions.UiObjectNotFoundError:
                         pass
-                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
+                    self.__scroll_elements_vertically(
+                        self.d(resourceId="com.instagram.android:id/follow_list_container"))
 
                     if self.d(text="Suggestions for you").exists:
                         list_following = list_following + [elem.get_text() for elem in self.d(
@@ -414,11 +417,13 @@ class Burbnbot:
     def get_followers_list(self) -> list:
         list_followers = []
         try:
+            finisher_str = "Suggestions for you"
             self.__reset_app()
             self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
             self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
             print(good("Opening followers list"))
-            followers_count = self.__str_to_number(self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
+            followers_count = self.__str_to_number(
+                self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
             print(good("{} followers".format(followers_count)))
             self.d(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
             self.wait()
@@ -429,17 +434,18 @@ class Burbnbot:
                             if self.d(resourceId="com.instagram.android:id/follow_list_username").count > 0:
                                 for elem in self.d(resourceId="com.instagram.android:id/follow_list_username"):
                                     list_followers.append(elem.get_text())
-                    except uiautomator2.exceptions.UiObjectNotFoundError as nfe:
+                    except uiautomator2.exceptions.UiObjectNotFoundError:
                         pass
 
-                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container"))
+                    self.__scroll_elements_vertically(
+                        self.d(resourceId="com.instagram.android:id/follow_list_container"))
 
                     if self.d(description="Retry").exists:
                         self.wait(10)
                         self.d(description="Retry").click()
 
                     if self.d(resourceId="com.instagram.android:id/row_header_textview").exists:
-                        if self.d(resourceId="com.instagram.android:id/row_header_textview").get_text() == "Suggestions for you":
+                        if self.d(resourceId="com.instagram.android:id/row_header_textview").get_text() == finisher_str:
                             break
 
                     print(run("Followers #: {}".format(len(list(dict.fromkeys(list_followers))))), end="\r", flush=True)
@@ -470,11 +476,13 @@ class Burbnbot:
                     lk = lk - 1
                 try:
                     if self.d(description="Like", className="android.widget.ImageView").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in self.d(description="Like", className="android.widget.ImageView")])
+                        lk = lk + len([self.__click_n_wait(e) for e in
+                                       self.d(description="Like", className="android.widget.ImageView")])
                         print(run("Liking: {}/{}".format(lk, amount)), end="\r", flush=True)
                     else:
-                        self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up", steps=15)
-                except uiautomator2.UiObjectNotFoundError as e:
+                        self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up",
+                                                                                                  steps=15)
+                except uiautomator2.exceptions.UiObjectNotFoundError as e:
                     self.__not_found_like(e)
                     pass
         except Exception as e:
@@ -582,12 +590,12 @@ class Burbnbot:
                                                self.d(resourceId="com.instagram.android:id/row_text")]
                     self.__scrool_elements_horizontally(self.d(resourceId="com.instagram.android:id/row_text"))
                 except Exception as e:
-                    print(bad("Error: {}.".format(e.message)))
+                    print(bad("Error: {}.".format(e)))
                     self.__treat_exception(e)
                     pass
         except Exception as e:
             self.lg.error(e)
-            return False
+            return []
         else:
             return list(dict.fromkeys(list_users))
 
@@ -602,12 +610,17 @@ class Burbnbot:
             self.d(resourceId="com.instagram.android:id/row_hashtag_image").click()
             self.wait()
             while not self.d(resourceId="com.instagram.android:id/row_header_textview", text="Suggestions").exists:
-                fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following") if self.d(resourceId="com.instagram.android:id/follow_button", text="Following").exists]
-                self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_user_imageview"))
+                fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in
+                           self.d(resourceId="com.instagram.android:id/follow_button", text="Following") if
+                           self.d(resourceId="com.instagram.android:id/follow_button", text="Following").exists]
+                self.__scroll_elements_vertically(
+                    self.d(resourceId="com.instagram.android:id/follow_list_user_imageview"))
                 if not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == "Hashtags":
                     self.d.press("back")
 
-            fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in self.d(resourceId="com.instagram.android:id/follow_button", text="Following") if self.d(resourceId="com.instagram.android:id/follow_button", text="Following").exists]
+            fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in
+                       self.d(resourceId="com.instagram.android:id/follow_button", text="Following") if
+                       self.d(resourceId="com.instagram.android:id/follow_button", text="Following").exists]
 
         except Exception as e:
             self.lg.error(e)

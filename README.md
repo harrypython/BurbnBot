@@ -9,7 +9,7 @@
 > [Instagram Was First Called 'Burbn'.](https://www.theatlantic.com/technology/archive/2014/07/instagram-used-to-be-called-brbn/373815/)  
   
 # BurbnBot
-BurbnBot is a bot for automated interaction in a famous social media app using a Android device or an Android Virtual Devices.  
+BurbnBot is a bot for automated interaction in a famous social media app using an Android device or an Android Virtual Devices.  
 ## Requirements  
 - Android 9.0  
 - Python 3.6+  
