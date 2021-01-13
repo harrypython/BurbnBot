@@ -249,7 +249,6 @@ class Burbnbot:
         """
         try:
             self.__reset_app()
-            print(good("Opening location code: {}.".format(locationcode)))
             url = "https://www.instagram.com/explore/locations/{}/".format(locationcode)
             print(good("Opening location {}.".format(url)))
             self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
@@ -468,20 +467,16 @@ class Burbnbot:
         """
         lk = 0
         try:
-            self.__reset_app()
             while lk < amount:
-                self.wait(i=random.randint(5, 10), muted=True)
                 if self.d(resourceId="com.instagram.android:id/secondary_label").exists and \
                         self.d(resourceId="com.instagram.android:id/secondary_label").get_text() == "Sponsored":
                     lk = lk - 1
                 try:
-                    if self.d(description="Like", className="android.widget.ImageView").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in
-                                       self.d(description="Like", className="android.widget.ImageView")])
+                    if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
+                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
                         print(run("Liking: {}/{}".format(lk, amount)), end="\r", flush=True)
                     else:
-                        self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up",
-                                                                                                  steps=15)
+                        self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
                 except uiautomator2.exceptions.UiObjectNotFoundError as e:
                     self.__not_found_like(e)
                     pass
