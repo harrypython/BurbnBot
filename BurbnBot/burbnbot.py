@@ -254,9 +254,9 @@ class Burbnbot:
             self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
             self.wait(5)
             if tab is not None:
-                while not self.d(resourceId="com.instagram.android:id/tab_layout").child_by_text(tab).exists:
+                while not self.d(text="{}".format(tab)).exists:
                     self.wait(1)
-                self.d(resourceId="com.instagram.android:id/tab_layout").child_by_text(tab).click()
+                self.d(text="{}".format(tab)).click()
             self.wait(5)
             self.d(resourceId='com.instagram.android:id/image_button').click()
         except Exception as e:
