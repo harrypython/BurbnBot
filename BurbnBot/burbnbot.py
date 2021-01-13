@@ -308,12 +308,12 @@ class Burbnbot:
         try:
             print(good("Opening hashtag: "), green(tag))
             self.__reset_app()
-            while not self.d(resourceId="com.instagram.android:id/tab_layout").exists:
+            while not self.d(text="{}".format(tab)).exists:
                 url = "https://www.instagram.com/explore/tags/{}/".format(tag)
                 self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
                 self.wait(5)
 
-            self.d.xpath('//*[@text="{}"]'.format(tab)).click()
+            self.d(text="{}".format(tab)).click()
             self.wait()
 
             if self.d.xpath("//*[@resource-id='com.instagram.android:id/hashtag_media_count']").exists:
