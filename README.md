@@ -97,6 +97,13 @@ for hashtag in followed_hashtags:
     if bot.open_tag(tag=hashtag, tab="Recent"):  # open the hashtag feed in the 'Recent' tab
         bot.like_n_swipe(amount=10)  # like 10 posts
 
+# Like 1 post of accounts you've interacted with the least in the last 90 days, 
+# such as liking their posts or reacting to their stories.
+least_interacted = bot.get_least_interacted()
+if len(least_interacted) > 0:
+    for u in least_interacted:
+        if bot.open_profile(username=u, open_post=True):
+            bot.like_n_swipe(1)
 
 ```  
   

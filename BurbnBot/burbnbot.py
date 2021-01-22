@@ -276,21 +276,20 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         try:
+            self.__reset_app()
             url = "https://www.instagram.com/{}/".format(username)
             print(good("Opening profile {}.".format(url)))
             self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
             self.wait()
-            r = self.d(resourceId='com.instagram.android:id/row_profile_header_imageview').exists
-            if open_post:
-                self.wait(3)
-                if self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
-                        className="android.widget.ImageView").exists:
-                    self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
-                        className="android.widget.ImageView").click()
-                else:
-                    print(bad("Looks like this profile have zero posts."))
-                    return False
-            return r
+            if self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == username:
+                if open_post:
+                    self.wait(3)
+                    if self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier", instance=0).child(className="android.widget.ImageView", instance=0).exists:
+                        self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier", instance=0).child(className="android.widget.ImageView", instance=0).click()
+                    else:
+                        print(bad("Looks like this profile have zero posts."))
+                        return False
+                return True
         except Exception as e:
             self.lg.error(e)
             return False
@@ -329,23 +328,21 @@ class Burbnbot:
         lu = []
         i = 0
         last_username = ""
+        self.__reset_app()
         try:
             print(good("Opening profiles less interacted."))
-            self.__reset_app()
-            while not self.d(resourceId="com.instagram.android:id/action_bar_title",
+            while not self.d(resourceId="com.instagram.android:id/action_bar_textview_title",
                              text="Least Interacted With").exists:
                 self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=10)
                 self.d(resourceId="com.instagram.android:id/profile_tab").click(timeout=5)
                 self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
                 self.d(resourceId="com.instagram.android:id/title", text="Least Interacted With").click()
-
-            self.wait(10)
-
-            while i < 3 and self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
-                lu = lu + [e.get_text() for e in self.d(resourceId="com.instagram.android:id/follow_list_username")]
-                self.wait()
-                self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container",
-                                                         className="android.widget.LinearLayout"))
+            self.wait(5)
+            while i < 3:
+                if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
+                    for e in self.d(resourceId="com.instagram.android:id/follow_list_username"):
+                        lu.append(e.get_text())
+                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container", className="android.widget.LinearLayout"))
 
                 if last_username == lu[-1]:
                     i += 1
@@ -354,8 +351,8 @@ class Burbnbot:
 
         except Exception as e:
             self.lg.error(e)
-        else:
-            return list(dict.fromkeys(lu))
+
+        return list(dict.fromkeys(lu))
 
     def __double_click(self, e: uiautomator2.UiObject):
         """Double click center the element :param e: Element
