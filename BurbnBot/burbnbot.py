@@ -71,12 +71,13 @@ class Burbnbot:
             self.d.app_clear(package_name="com.instagram.android")
             quit()
 
-    def __reset_app(self):
-        print(good("Restarting app"))
+    def __reset_app(self, muted: bool = False):
+        if not muted:
+            print(good("Restarting app"))
         self.d.app_stop_all()
         self.wait()
         self.d.app_start(package_name="com.instagram.android")
-        self.wait()
+        self.wait(muted=muted)
 
     def __treat_exception(self, e: Exception):
         self.d.screenshot("log/{}.jpg".format(datetime.datetime.now().strftime("%Y-%m-%d_-_%H_%M_%S-%f%z")))
@@ -284,17 +285,16 @@ class Burbnbot:
             if self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == username:
                 if open_post:
                     self.wait(3)
-                    if self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier", instance=0).child(className="android.widget.ImageView", instance=0).exists:
-                        self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier", instance=0).child(className="android.widget.ImageView", instance=0).click()
-                    else:
-                        print(bad("Looks like this profile have zero posts."))
+                    if not self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier",
+                                  instance=0).child(className="android.widget.ImageView", instance=0).exists:
+                        raise Exception("Looks like this profile have zero posts.")
                         return False
                 return True
         except Exception as e:
             self.lg.error(e)
             return False
 
-    def open_tag(self, tag: str, tab: str = "Recent") -> bool:
+    def open_tag(self, tag: str, tab: str = "Recent", check_banned: bool = True) -> bool:
         """Search a hashtag
 
         Args:
@@ -305,12 +305,15 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         try:
+            url = "https://www.instagram.com/explore/tags/{}/".format(tag)
             print(good("Opening hashtag: "), green(tag))
-            self.__reset_app()
-            while not self.d(text="{}".format(tab)).exists:
-                url = "https://www.instagram.com/explore/tags/{}/".format(tag)
+            self.__reset_app(muted=True)
+            while not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").exists:
                 self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-                self.wait(5)
+            if self.d(resourceId="com.instagram.android:id/empty_state_view_subtitle").exists:
+                raise Exception("#{} there is no posts.".format(tag))
+            if self.d(resourceId="com.instagram.android:id/inform_body").exists and check_banned:
+                raise Exception(self.d(resourceId="com.instagram.android:id/inform_body").get_text())
 
             self.d(text="{}".format(tab)).click()
             self.wait()
@@ -342,7 +345,9 @@ class Burbnbot:
                 if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                     for e in self.d(resourceId="com.instagram.android:id/follow_list_username"):
                         lu.append(e.get_text())
-                    self.__scroll_elements_vertically(self.d(resourceId="com.instagram.android:id/follow_list_container", className="android.widget.LinearLayout"))
+                    self.__scroll_elements_vertically(
+                        self.d(resourceId="com.instagram.android:id/follow_list_container",
+                               className="android.widget.LinearLayout"))
 
                 if last_username == lu[-1]:
                     i += 1
@@ -470,7 +475,9 @@ class Burbnbot:
                     lk = lk - 1
                 try:
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
+                        lk = lk + len([self.__click_n_wait(e) for e in
+                                       self.d(resourceId="com.instagram.android:id/row_feed_button_like",
+                                              description="Like")])
                         print(run("Liking: {}/{}".format(lk, amount)), end="\r", flush=True)
                     else:
                         self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
