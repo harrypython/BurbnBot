@@ -69,7 +69,7 @@ class Burbnbot:
             uiautomator2.logger.error(e)
             quit()
 
-    def __reset_app(self, muted: bool = False):
+    def __reset_app(self, muted: bool = True):
         if not muted:
             uiautomator2.logger.info("Restarting app")
         self.d.app_stop_all()
@@ -469,15 +469,12 @@ class Burbnbot:
         lk = 0
         try:
             while lk < amount:
-                if self.d(resourceId="com.instagram.android:id/secondary_label").exists and \
-                        self.d(resourceId="com.instagram.android:id/secondary_label").get_text() == "Sponsored":
-                    lk = lk - 1
+                if self.d(resourceId="com.instagram.android:id/secondary_label").exists and self.d(resourceId="com.instagram.android:id/secondary_label").get_text() == "Sponsored":
+                    self.__skip_sponsored()
                 try:
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in
-                                       self.d(resourceId="com.instagram.android:id/row_feed_button_like",
-                                              description="Like")])
-                        uiautomator2.logger.info("Liking {} from {}".format(lk, amount))
+                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
+                        uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
                     else:
                         self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
                 except uiautomator2.exceptions.UiObjectNotFoundError as e:
@@ -487,7 +484,20 @@ class Burbnbot:
             self.__treat_exception(e)
             return None
 
-        uiautomator2.logger.info("Liked: {}/{}".format(lk, amount))
+        uiautomator2.logger.info("Done: Liked {}/{}".format(lk, amount))
+
+    def __skip_sponsored(self):
+        str_id = "com.instagram.android:id/secondary_label"
+        fx = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['left']
+        fy = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['bottom']
+        tx = fx
+        ty = 0
+        self.d.swipe(fx, fy, tx, ty, duration=0)
+        str_id = "com.instagram.android:id/row_feed_view_group_buttons"
+        fx = self.d(resourceId=str_id, instance=0).info['bounds']['left']
+        fy = self.d(resourceId=str_id, instance=0).info['bounds']['bottom']
+        tx = fx
+        self.d.swipe(fx, fy, tx, ty, duration=0)
 
     def __not_found_like(self, e: uiautomator2.UiObjectNotFoundError):
         if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
@@ -702,7 +712,5 @@ class Burbnbot:
             self.d(text="Okay").click()
             uiautomator2.logger.info(("Logout '{}, {}'".format(
                 self.d(resourceId="com.instagram.android:id/body_message_device").get_text(),
-                self.d(resourceId="com.instagram.android:id/title_message").get_text())
-            )
-            )
+                self.d(resourceId="com.instagram.android:id/title_message").get_text())))
             self.wait()

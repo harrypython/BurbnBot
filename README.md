@@ -115,6 +115,22 @@ if len(least_interacted) > 0:
 
 ```  
   
+## Features
+- Open home feed
+- Login
+- Open post
+- Open location feed
+- Open profile
+- Open hashtag feed
+- List followings
+- List followers
+- List followed hashtags
+- Like and scroll an opened feed
+- Follow user
+- Unfollow user
+- How long ago the user last posted
+- Logout from other devices
+  
 ## Contributing  
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.  
   
