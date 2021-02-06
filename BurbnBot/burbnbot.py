@@ -535,11 +535,19 @@ class Burbnbot:
         Args:
             username (str):
         """
-        if self.open_profile(username):
-            while self.d(text="Follow").exists:
-                self.d(text="Follow").click()
-            uiautomator2.logger.info("Following user: {}".format(username))
-        return self.d(text="Following").exists
+        try:
+            if self.open_profile(username):
+                self.d(resourceId="com.instagram.android:id/profile_header_actions_top_row").child(
+                    className="android.widget.Button", instance=0).click()
+                if self.d(resourceId="com.instagram.android:id/profile_header_actions_top_row").child(
+                        className="android.widget.Button", instance=0).get_text() == "Requested":
+                    uiautomator2.logger.info(("Requested following user: {}".format(username)))
+                else:
+                    uiautomator2.logger.info("Following user: {}".format(username))
+            return True
+        except Exception as e:
+            uiautomator2.logger.error(e)
+            return False
 
     def save_user(self, username: str, colletion: str = None):
         """
