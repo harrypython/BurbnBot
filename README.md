@@ -64,7 +64,14 @@ users_followers = bot.get_followers_list()
 for user in [u for u in users_following if u not in users_followers]:
     # unfollow who don't follow you back
     bot.unfollow(username=user)
-
+    
+users_following = bot.get_following_list()
+if len(users_following):
+    for u in users_following:
+        # Unfollow who hasn't made a new post for the past 90 days 
+        if bot.get_days_lastpost(username=u) > 90:
+            bot.unfollow(username=u)
+            
 # Open hashtag's feed 'creative',
 # check if the hashtag is banned
 # move to Recent tab and
