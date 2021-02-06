@@ -1,11 +1,8 @@
 import argparse
 import datetime
 import random
-
-from time import sleep
-
 import uiautomator2
-from huepy import *
+from time import sleep
 
 
 class MediaType(object):
@@ -21,6 +18,7 @@ class Burbnbot:
     version_android: str = "9"
     month_list: list = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
                         "October", "November", "December"]
+    checkfor = [" hours ago", " hour ago", " days ago", " day ago", " minute ago", " minutes ago"]
 
     def __init__(self, device: str = None) -> None:
         """
@@ -54,8 +52,8 @@ class Burbnbot:
             self.d.app_start(package_name="com.instagram.android")
 
             if not self.d.app_info(package_name="com.instagram.android")['versionName'] == self.version_app:
-                print(info(
-                    "You are using a different version than the recommended one, this can generate unexpected errors."))
+                uiautomator2.logger.info(
+                    "You are using a different version than the recommended one, this can generate unexpected errors.")
 
             if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
                 ri = "com.instagram.android:id/default_dialog_title"
@@ -414,8 +412,7 @@ class Burbnbot:
                             resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                         break
 
-                    # print(run("Following: #{}".format(len(list(dict.fromkeys(list_following))))), end="\r", flush=True)
-                # uiautomator2.logger.info("Done")
+                    uiautomator2.logger.info("Amount of following: {}".format(len(list(dict.fromkeys(list_following)))))
         except Exception as e:
             self.__treat_exception(e)
         return list(dict.fromkeys(list_following))
@@ -453,14 +450,13 @@ class Burbnbot:
                         if self.d(resourceId="com.instagram.android:id/row_header_textview").get_text() == finisher_str:
                             break
 
-                #     print(run("Followers #: {}".format(len(list(dict.fromkeys(list_followers))))), end="\r", flush=True)
-                # uiautomator2.logger.info("Done"), "\r")
+                    uiautomator2.logger.info("Amount of following: {}".format(len(list(dict.fromkeys(list_followers)))))
         except Exception as e:
             self.__treat_exception(e)
 
         return list(dict.fromkeys(list_followers))
 
-    def __click_n_wait(elem: uiautomator2.UiObject):
+    def __click_n_wait(self, elem: uiautomator2.UiObject):
         if elem.exists:
             elem.click()
             sleep(random.randint(3, 5))
@@ -496,11 +492,10 @@ class Burbnbot:
     def __not_found_like(self, e: uiautomator2.UiObjectNotFoundError):
         if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
             if self.d(resourceId="com.instagram.android:id/default_dialog_title").get_text() == "Try Again Later":
-                print(bad("ERROR: TOO MANY REQUESTS, TAKE A BREAK HAMILTON."))
+                uiautomator2.logger.critical("ERROR: TOO MANY REQUESTS, TAKE A BREAK HAMILTON.")
                 self.d.app_clear(package_name="com.instagram.android")
                 quit(1)
-        msg = "Element not found: {} You probably don't have to worry about.".format(e.data)
-        print(bad(msg))
+        uiautomator2.logger.warning("Element not found: {} You probably don't have to worry about.".format(e.data))
         uiautomator2.logger.error(e)
 
         # sometimes a wrong click open a different screen
@@ -508,9 +503,7 @@ class Burbnbot:
             self.d(resourceId="com.instagram.android:id/pre_capture_buttons_top_container").exists) or \
                 (not self.d(resourceId="com.instagram.android:id/refreshable_container").exists and
                  self.d(resourceId="com.instagram.android:id/action_bar_new_title_container").exists):
-            msg = "It looks like we're in the wrong place, let's try to get back."
-            print(bad(msg))
-            uiautomator2.logger.error(msg)
+            uiautomator2.logger.warning("It looks like we're in the wrong place, let's try to get back.")
             self.d.press("back")
 
     def unfollow(self, username: str):
@@ -597,7 +590,7 @@ class Burbnbot:
                                                self.d(resourceId="com.instagram.android:id/row_text")]
                     self.__scrool_elem_hori(self.d(resourceId="com.instagram.android:id/row_text"))
                 except Exception as e:
-                    print(bad("Error: {}.".format(e)))
+                    uiautomator2.logger.error("Error: {}.".format(e))
                     self.__treat_exception(e)
                     pass
         except Exception as e:
@@ -634,24 +627,22 @@ class Burbnbot:
         else:
             return list(dict.fromkeys(fh))
 
-    def is_date(self, textview: str):
-        checkfor = [" hours ago", " hour ago", " days ago", " day ago", " minute ago", " minutes ago"]
+    def __is_date(self, textview: str):
         if textview.startswith(tuple(self.month_list)):
             return True
 
-        for c in checkfor:
+        for c in self.checkfor:
             if c in textview:
                 return True
 
         return False
 
-    def count_days(self, textview: str):
+    def __count_days(self, textview: str):
         try:
             y = 0
             m = 0
             d = 0
             textview = textview.replace(" • See Translation", "")
-            checkfor = [" hours ago", " hour ago", " days ago", " day ago", " minute ago", " minutes ago"]
             if textview.startswith(tuple(self.month_list)):
                 d = textview.split(" ")[1].replace(",", "")
                 m = str(int(self.month_list.index(textview.split(" ")[0])) + 1)
@@ -661,7 +652,7 @@ class Burbnbot:
                 else:
                     y = textview.split(" ")[2]
 
-            for c in checkfor:
+            for c in self.checkfor:
                 if c in textview:
                     if "hour ago" in textview or \
                             "hours ago" in textview or \
@@ -686,8 +677,8 @@ class Burbnbot:
                 for txt in self.d(resourceId="android:id/list",
                                   className="androidx.recyclerview.widget.RecyclerView"). \
                         child(className="android.widget.TextView"):
-                    if self.is_date(txt.get_text()):
-                        return self.count_days(txt.get_text())
+                    if self.__is_date(txt.get_text()):
+                        return self.__count_days(txt.get_text())
             else:
                 return 0
         except Exception as e:
@@ -709,10 +700,9 @@ class Burbnbot:
             self.d.xpath(str_xpath).click()
             self.d(text="Log Out").click()
             self.d(text="Okay").click()
-            print(
-                good("Logout '{}, {}'".format(
-                    self.d(resourceId="com.instagram.android:id/body_message_device").get_text(),
-                    self.d(resourceId="com.instagram.android:id/title_message").get_text())
-                )
+            uiautomator2.logger.info(("Logout '{}, {}'".format(
+                self.d(resourceId="com.instagram.android:id/body_message_device").get_text(),
+                self.d(resourceId="com.instagram.android:id/title_message").get_text())
+            )
             )
             self.wait()

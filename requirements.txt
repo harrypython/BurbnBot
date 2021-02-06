@@ -1,3 +1,1 @@
-loguru>=0.5.3
 uiautomator2>=2.11
-huepy>=1.2.1
