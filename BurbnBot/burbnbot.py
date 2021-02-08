@@ -469,7 +469,7 @@ class Burbnbot:
         lk = 0
         try:
             while lk < amount:
-                if self.d(resourceId="com.instagram.android:id/secondary_label").exists and self.d(resourceId="com.instagram.android:id/secondary_label").get_text() == "Sponsored":
+                if self.d(resourceId="com.instagram.android:id/row_feed_photo_subtitle").exists and self.d(resourceId="com.instagram.android:id/row_feed_photo_subtitle").get_text() == "Sponsored":
                     self.__skip_sponsored()
                 try:
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
@@ -487,7 +487,7 @@ class Burbnbot:
         uiautomator2.logger.info("Done: Liked {}/{}".format(lk, amount))
 
     def __skip_sponsored(self):
-        str_id = "com.instagram.android:id/secondary_label"
+        str_id = "com.instagram.android:id/row_feed_photo_subtitle"
         fx = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['left']
         fy = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['bottom']
         tx = fx
