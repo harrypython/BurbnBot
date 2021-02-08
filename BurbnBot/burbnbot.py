@@ -467,14 +467,16 @@ class Burbnbot:
             amount (int): number of posts to like
         """
         lk = 0
+        subtit: str = "com.instagram.android:id/row_feed_photo_subtitle"
         try:
             while lk < amount:
-                if self.d(resourceId="com.instagram.android:id/row_feed_photo_subtitle").exists and self.d(resourceId="com.instagram.android:id/row_feed_photo_subtitle").get_text() == "Sponsored":
-                    self.__skip_sponsored()
                 try:
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
                         lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
                         uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
+
+                        if self.d(resourceId=subtit).exists and self.d(resourceId=subtit).get_text() == "Sponsored":
+                            self.__skip_sponsored()
                     else:
                         self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
                 except uiautomator2.exceptions.UiObjectNotFoundError as e:
@@ -487,6 +489,7 @@ class Burbnbot:
         uiautomator2.logger.info("Done: Liked {}/{}".format(lk, amount))
 
     def __skip_sponsored(self):
+        uiautomator2.logger.info("Skipping sponsored post")
         str_id = "com.instagram.android:id/row_feed_photo_subtitle"
         fx = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['left']
         fy = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['bottom']
