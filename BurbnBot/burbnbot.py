@@ -74,13 +74,13 @@ class Burbnbot:
             uiautomator2.logger.info("Restarting app")
         self.d.app_stop_all()
         self.d.app_start(package_name="com.instagram.android")
-        self.wait(muted=True)
+        self.wait()
 
     def __treat_exception(self, e: Exception):
         self.d.screenshot("log/{}.jpg".format(datetime.datetime.now().strftime("%Y-%m-%d_-_%H_%M_%S-%f%z")))
         uiautomator2.logger.error(e)
 
-    def wait(self, i: int = None, muted=False):
+    def wait(self, i: int = None):
         """Wait the device :param i: number of seconds to wait, if None will be
         a random number between 1 and 3 :type i: int
 
@@ -89,11 +89,7 @@ class Burbnbot:
         """
         if i is None:
             i = random.randint(1, 3)
-        if muted:
-            sleep(i)
-        else:
-            uiautomator2.logger.info("Waiting for {} seconds.".format(i))
-            sleep(i)
+        sleep(i)
 
     def __str_to_number(self, n: str):
         """format (string) numbers in thousands, million or billions :param n:
@@ -276,7 +272,7 @@ class Burbnbot:
             uiautomator2.logger.info("Opening profile {}.".format(url))
             while not self.d(resourceId="com.instagram.android:id/action_bar_title", text=username).exists:
                 self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-                self.wait(2, muted=True)
+                self.wait(2)
 
                 if self.d(resourceId="com.instagram.android:id/no_found_text").exists:
                     raise EnvironmentError("{}: {}".format(username, self.d(resourceId="com.instagram.android:id/no_found_text").get_text()))
@@ -311,7 +307,7 @@ class Burbnbot:
             uiautomator2.logger.info("Opening hashtag: {}".format(tag))
             while not self.d(resourceId="com.instagram.android:id/action_bar_new_title_layout").exists:
                 self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-                self.wait(5, muted=True)
+                self.wait(5)
             if self.d(resourceId="com.instagram.android:id/empty_state_headline_component").exists:
                 raise EnvironmentError(self.d(resourceId="com.instagram.android:id/igds_headline_body").get_text())
             if self.d(resourceId="com.instagram.android:id/igds_headline_body").exists:
@@ -382,12 +378,12 @@ class Burbnbot:
                 self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
             uiautomator2.logger.info("{} followings".format(following_count))
             self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
-            self.wait(muted=True)
+            self.wait()
             while not self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
                 self.d(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
-                self.wait(muted=True)
+                self.wait()
             self.d(resourceId="com.instagram.android:id/follow_list_sorting_option", text="Date Followed: Earliest").click(timeout=10)
-            self.wait(muted=True)
+            self.wait()
             if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                 rscid = "com.instagram.android:id/sorting_entry_row_option"
                 fx = self.d(resourceId=rscid).info['visibleBounds']['right'] / 2
@@ -427,7 +423,7 @@ class Burbnbot:
                 self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
             uiautomator2.logger.info("{} followers".format(followers_count))
             self.d(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
-            self.wait(muted=True)
+            self.wait()
             if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                 while True:
                     try:
@@ -680,7 +676,7 @@ class Burbnbot:
     def get_days_lastpost(self, username):
         try:
             if self.open_profile(username=username, open_post=True):
-                self.wait(5, muted=True)
+                self.wait(5)
                 self.d(resourceId="android:id/list",
                        className="androidx.recyclerview.widget.RecyclerView").swipe("up")
                 for txt in self.d(resourceId="android:id/list",
