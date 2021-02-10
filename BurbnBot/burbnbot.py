@@ -383,12 +383,12 @@ class Burbnbot:
                 self.d(resourceId="com.instagram.android:id/row_profile_header_textview_following_count").get_text())
             uiautomator2.logger.info("{} followings".format(following_count))
             self.d(resourceId="com.instagram.android:id/row_profile_header_following_container").click(timeout=10)
-            self.wait()
+            self.wait(muted=True)
             while not self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
                 self.d(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
-                self.wait()
+                self.wait(muted=True)
             self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
-            self.wait()
+            self.wait(muted=True)
             if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                 rscid = "com.instagram.android:id/sorting_entry_row_option"
                 fx = self.d(resourceId=rscid).info['visibleBounds']['right'] / 2
@@ -412,7 +412,7 @@ class Burbnbot:
                             resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                         break
 
-                    uiautomator2.logger.info("Amount of following: {}".format(len(list(dict.fromkeys(list_following)))))
+            uiautomator2.logger.info("Done: amount of following: {}".format(len(list(dict.fromkeys(list_following)))))
         except Exception as e:
             self.__treat_exception(e)
         return list(dict.fromkeys(list_following))
@@ -429,7 +429,7 @@ class Burbnbot:
                 self.d(resourceId="com.instagram.android:id/row_profile_header_textview_followers_count").get_text())
             uiautomator2.logger.info("{} followers".format(followers_count))
             self.d(resourceId="com.instagram.android:id/row_profile_header_followers_container").click(timeout=10)
-            self.wait()
+            self.wait(muted=True)
             if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                 while True:
                     try:
@@ -450,10 +450,11 @@ class Burbnbot:
                         if self.d(resourceId="com.instagram.android:id/row_header_textview").get_text() == finisher_str:
                             break
 
-                    uiautomator2.logger.info("Amount of following: {}".format(len(list(dict.fromkeys(list_followers)))))
+                    uiautomator2.logger.info("Amount of followers: {}".format(len(list(dict.fromkeys(list_followers)))))
         except Exception as e:
             self.__treat_exception(e)
 
+        uiautomator2.logger.info("Done: amount of following: {}".format(len(list(dict.fromkeys(list_followers)))))
         return list(dict.fromkeys(list_followers))
 
     def __click_n_wait(self, elem: uiautomator2.UiObject):
@@ -525,8 +526,8 @@ class Burbnbot:
             username (str):
         """
         try:
-            uiautomator2.logger.info("Unfollowing user: {}".format(username))
             self.open_profile(username=username)
+            uiautomator2.logger.info("Unfollowing user: {}".format(username))
             self.d(resourceId="com.instagram.android:id/profile_header_actions_top_row").child(text="Following").click()
             self.d(resourceId="com.instagram.android:id/follow_sheet_unfollow_row").click()
             if self.d(resourceId="com.instagram.android:id/dialog_body").exists:
