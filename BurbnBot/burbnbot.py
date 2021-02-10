@@ -274,14 +274,12 @@ class Burbnbot:
             self.__reset_app()
             url = "https://www.instagram.com/{}/".format(username)
             uiautomator2.logger.info("Opening profile {}.".format(url))
+            while not self.d(resourceId="com.instagram.android:id/action_bar_title", text=username).exists:
+                self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+                self.wait(2, muted=True)
 
-            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-            self.wait(1, muted=True)
-
-            if self.d(resourceId="com.instagram.android:id/no_found_text").exists:
-                raise EnvironmentError("{}: {}".
-                                       format(username,
-                                              self.d(resourceId="com.instagram.android:id/no_found_text").get_text()))
+                if self.d(resourceId="com.instagram.android:id/no_found_text").exists:
+                    raise EnvironmentError("{}: {}".format(username, self.d(resourceId="com.instagram.android:id/no_found_text").get_text()))
 
             row_profile_header_textview_post_count = "com.instagram.android:id/row_profile_header_textview_post_count"
             if open_post:
@@ -689,6 +687,7 @@ class Burbnbot:
                                   className="androidx.recyclerview.widget.RecyclerView"). \
                         child(className="android.widget.TextView"):
                     if self.__is_date(txt.get_text()):
+                        uiautomator2.logger.info("{} last post: {}".format(username, txt.get_text()))
                         return self.__count_days(txt.get_text())
             else:
                 return 0
