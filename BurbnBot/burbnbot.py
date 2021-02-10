@@ -14,7 +14,7 @@ class MediaType(object):
 
 class Burbnbot:
     d: uiautomator2.Device
-    version_app: str = "158.0.0.30.123"
+    version_app: str = "173.0.0.39.120"
     version_android: str = "9"
     month_list: list = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
                         "October", "November", "December"]
@@ -275,12 +275,11 @@ class Burbnbot:
             url = "https://www.instagram.com/{}/".format(username)
             uiautomator2.logger.info("Opening profile {}.".format(url))
 
-            while not self.d(resourceId="com.instagram.android:id/action_bar_textview_title"):
-                self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-                self.wait(1, muted=True)
+            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+            self.wait(1, muted=True)
 
             if self.d(resourceId="com.instagram.android:id/no_found_text").exists:
-                raise EnvironmentError("{} ".
+                raise EnvironmentError("{}: {}".
                                        format(username,
                                               self.d(resourceId="com.instagram.android:id/no_found_text").get_text()))
 
@@ -312,10 +311,12 @@ class Burbnbot:
         try:
             url = "https://www.instagram.com/explore/tags/{}/".format(tag)
             uiautomator2.logger.info("Opening hashtag: {}".format(tag))
-            while not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").exists:
+            while not self.d(resourceId="com.instagram.android:id/action_bar_new_title_layout").exists:
                 self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
                 self.wait(5, muted=True)
-            if self.d(resourceId="com.instagram.android:id/empty_state_view_subtitle").exists:
+            if self.d(resourceId="com.instagram.android:id/empty_state_headline_component").exists:
+                raise EnvironmentError(self.d(resourceId="com.instagram.android:id/igds_headline_body").get_text())
+            if self.d(resourceId="com.instagram.android:id/igds_headline_body").exists:
                 raise EnvironmentError("#{} there is no posts.".format(tag))
             if self.d(resourceId="com.instagram.android:id/inform_body").exists and check_banned:
                 raise EnvironmentError(self.d(resourceId="com.instagram.android:id/inform_body").get_text())
@@ -387,7 +388,7 @@ class Burbnbot:
             while not self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
                 self.d(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
                 self.wait(muted=True)
-            self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button")[2].click(timeout=10)
+            self.d(resourceId="com.instagram.android:id/follow_list_sorting_option", text="Date Followed: Earliest").click(timeout=10)
             self.wait(muted=True)
             if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                 rscid = "com.instagram.android:id/sorting_entry_row_option"
@@ -408,8 +409,7 @@ class Burbnbot:
                     self.__scroll_elem_vert(self.d(resourceId="com.instagram.android:id/follow_list_container"))
 
                     if self.d(text="Suggestions for you").exists:
-                        list_following = list_following + [elem.get_text() for elem in self.d(
-                            resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                        list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                         break
 
             uiautomator2.logger.info("Done: amount of following: {}".format(len(list(dict.fromkeys(list_following)))))
@@ -468,16 +468,15 @@ class Burbnbot:
             amount (int): number of posts to like
         """
         lk = 0
-        subtit: str = "com.instagram.android:id/row_feed_photo_subtitle"
+        subtit: str = "com.instagram.android:id/secondary_label"
         try:
             while lk < amount:
                 try:
+                    if self.d(resourceId="com.instagram.android:id/secondary_label", text="Sponsored").exists:
+                        self.__skip_sponsored()
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
                         lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
                         uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
-
-                        if self.d(resourceId=subtit).exists and self.d(resourceId=subtit).get_text() == "Sponsored":
-                            self.__skip_sponsored()
                     else:
                         self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
                 except uiautomator2.exceptions.UiObjectNotFoundError as e:
@@ -491,7 +490,7 @@ class Burbnbot:
 
     def __skip_sponsored(self):
         uiautomator2.logger.info("Skipping sponsored post")
-        str_id = "com.instagram.android:id/row_feed_photo_subtitle"
+        str_id = "com.instagram.android:id/secondary_label"
         fx = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['left']
         fy = self.d(resourceId=str_id, text="Sponsored", instance=0).info['bounds']['bottom']
         tx = fx
@@ -526,13 +525,13 @@ class Burbnbot:
             username (str):
         """
         try:
-            self.open_profile(username=username)
-            uiautomator2.logger.info("Unfollowing user: {}".format(username))
-            self.d(resourceId="com.instagram.android:id/profile_header_actions_top_row").child(text="Following").click()
-            self.d(resourceId="com.instagram.android:id/follow_sheet_unfollow_row").click()
-            if self.d(resourceId="com.instagram.android:id/dialog_body").exists:
-                self.d(resourceId="com.instagram.android:id/primary_button").click()
-            return True
+            if self.open_profile(username=username):
+                uiautomator2.logger.info("Unfollowing user: {}".format(username))
+                self.d(className="android.widget.Button", text="Following").click()
+                self.d(resourceId="com.instagram.android:id/follow_sheet_unfollow_row").click()
+                if self.d(resourceId="com.instagram.android:id/dialog_body").exists:
+                    self.d(resourceId="com.instagram.android:id/primary_button").click()
+                return True
         except Exception as e:
             uiautomator2.logger.error(e)
             return False
@@ -544,10 +543,8 @@ class Burbnbot:
         """
         try:
             if self.open_profile(username):
-                self.d(resourceId="com.instagram.android:id/profile_header_actions_top_row").child(
-                    className="android.widget.Button", instance=0).click()
-                if self.d(resourceId="com.instagram.android:id/profile_header_actions_top_row").child(
-                        className="android.widget.Button", instance=0).get_text() == "Requested":
+                self.d(className="android.widget.Button", text="Follow").click()
+                if self.d(className="android.widget.Button", text="Requested").exists:
                     uiautomator2.logger.info(("Requested following user: {}".format(username)))
                 else:
                     uiautomator2.logger.info("Following user: {}".format(username))
