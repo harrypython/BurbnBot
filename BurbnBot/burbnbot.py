@@ -275,7 +275,8 @@ class Burbnbot:
                 self.wait(2)
 
                 if self.d(resourceId="com.instagram.android:id/no_found_text").exists:
-                    raise EnvironmentError("{}: {}".format(username, self.d(resourceId="com.instagram.android:id/no_found_text").get_text()))
+                    raise EnvironmentError("{}: {}".format(username, self.d(
+                        resourceId="com.instagram.android:id/no_found_text").get_text()))
 
             row_profile_header_textview_post_count = "com.instagram.android:id/row_profile_header_textview_post_count"
             if open_post:
@@ -382,7 +383,8 @@ class Burbnbot:
             while not self.d(resourceId="com.instagram.android:id/follow_list_sorting_option_radio_button").exists:
                 self.d(resourceId="com.instagram.android:id/sorting_entry_row_icon").click()
                 self.wait()
-            self.d(resourceId="com.instagram.android:id/follow_list_sorting_option", text="Date Followed: Earliest").click(timeout=10)
+            self.d(resourceId="com.instagram.android:id/follow_list_sorting_option",
+                   text="Date Followed: Earliest").click(timeout=10)
             self.wait()
             if self.d(resourceId="com.instagram.android:id/follow_list_username").exists:
                 rscid = "com.instagram.android:id/sorting_entry_row_option"
@@ -403,7 +405,8 @@ class Burbnbot:
                     self.__scroll_elem_vert(self.d(resourceId="com.instagram.android:id/follow_list_container"))
 
                     if self.d(text="Suggestions for you").exists:
-                        list_following = list_following + [elem.get_text() for elem in self.d(resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
+                        list_following = list_following + [elem.get_text() for elem in self.d(
+                            resourceId="com.instagram.android:id/follow_list_username") if elem.exists]
                         break
 
             uiautomator2.logger.info("Done: amount of following: {}".format(len(list(dict.fromkeys(list_following)))))
@@ -469,7 +472,9 @@ class Burbnbot:
                     if self.d(resourceId="com.instagram.android:id/secondary_label", text="Sponsored").exists:
                         self.__skip_sponsored()
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
+                        lk = lk + len([self.__click_n_wait(e) for e in
+                                       self.d(resourceId="com.instagram.android:id/row_feed_button_like",
+                                              description="Like")])
                         uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
                     else:
                         self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
@@ -677,11 +682,10 @@ class Burbnbot:
         try:
             if self.open_profile(username=username, open_post=True):
                 self.wait(5)
-                self.d(resourceId="android:id/list",
-                       className="androidx.recyclerview.widget.RecyclerView").swipe("up")
+                self.d(resourceId="android:id/list", className="androidx.recyclerview.widget.RecyclerView").swipe("up")
                 for txt in self.d(resourceId="android:id/list",
-                                  className="androidx.recyclerview.widget.RecyclerView"). \
-                        child(className="android.widget.TextView"):
+                                  className="androidx.recyclerview.widget.RecyclerView").child(
+                        className="android.widget.TextView"):
                     if self.__is_date(txt.get_text()):
                         uiautomator2.logger.info("{} last post: {}".format(username, txt.get_text()))
                         return self.__count_days(txt.get_text())
