@@ -64,14 +64,20 @@ users_followers = bot.get_followers_list()
 for user in [u for u in users_following if u not in users_followers]:
     # unfollow who don't follow you back
     bot.unfollow(username=user)
-    
+
+# open explorer session, follow 10 new  users
+# and save the posts in a collection with name
+# yyyy-mm-dd. This way you can check the users
+# followed by the app
+bot.follow_n_save(amount=10)
+
 users_following = bot.get_following_list()
 if len(users_following):
     for u in users_following:
-        # Unfollow who hasn't made a new post for the past 90 days 
+        # Unfollow who hasn't made a new post for the past 90 days
         if bot.get_days_lastpost(username=u) > 90:
             bot.unfollow(username=u)
-            
+
 # Open hashtag's feed 'creative',
 # check if the hashtag is banned
 # move to Recent tab and
@@ -105,13 +111,12 @@ for hashtag in followed_hashtags:
     if bot.open_tag(tag=hashtag, tab="Recent"):  # open the hashtag feed in the 'Recent' tab
         bot.like_n_swipe(amount=10)  # like 10 posts
 
-# Like 1 post of accounts you've interacted with the least in the last 90 days, 
-# such as liking their posts or reacting to their stories.
-least_interacted = bot.get_least_interacted()
-if len(least_interacted) > 0:
-    for u in least_interacted:
-        if bot.open_profile(username=u, open_post=True):
-            bot.like_n_swipe(1)
+# like accounts you've interacted with the least in the last 90 days
+usernames = bot.get_least_interacted()
+for u in usernames:
+    if bot.open_profile(username=u, open_post=True):
+        bot.like_n_swipe(3)
+
 
 ```  
   

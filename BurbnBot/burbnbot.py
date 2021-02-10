@@ -151,13 +151,11 @@ class Burbnbot:
         try:
             uiautomator2.logger.info("Opening home feed")
             self.__reset_app()
-            self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
-            self.d(resourceId='com.instagram.android:id/tab_icon', instance=0).click()
+            self.wait(2)
+            return True
         except Exception as e:
             uiautomator2.logger.error(e)
             return False
-        else:
-            return True
 
     def get_users_liked_by_you(self, amount):
         self.d(resourceId="com.instagram.android:id/profile_tab").click()
@@ -552,42 +550,6 @@ class Burbnbot:
             uiautomator2.logger.error(e)
             return False
 
-    def save_user(self, username: str, colletion: str = None):
-        """
-        Args:
-            username (str):
-            colletion (str):
-        """
-        if colletion is None:
-            colletion = str(datetime.date.today())
-        if self.open_profile(username):
-            if self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
-                    className="android.widget.ImageView").exists:
-                self.d(resourceId="com.instagram.android:id/profile_viewpager").child(
-                    className="android.widget.ImageView").click()
-                self.wait()
-                self.d(resourceId="com.instagram.android:id/row_feed_button_save").long_click(duration=3)
-                if self.d(resourceId="com.instagram.android:id/collection_name").exists:
-                    collections_name = [e.get_text() for e in
-                                        self.d(resourceId="com.instagram.android:id/collection_name")]
-                    lst = ""
-                    while not lst == collections_name[-1]:
-                        if self.d(text=colletion).exists:
-                            self.d(text=colletion).click()
-                            return True
-                        collections_name = collections_name + [e.get_text() for e in self.d(
-                            resourceId="com.instagram.android:id/collection_name")]
-                        self.__scrool_elem_hori(
-                            self.d(resourceId="com.instagram.android:id/selectable_image"))
-                        lst = self.d(resourceId="com.instagram.android:id/collection_name")[-1].get_text()
-
-                    self.d(resourceId='com.instagram.android:id/save_to_collection_new_collection_button').click()
-                    self.wait()
-                    self.d(resourceId='com.instagram.android:id/create_collection_edit_text').send_keys(colletion)
-                    self.d(resourceId='com.instagram.android:id/save_to_collection_action_button').click()
-                    return True
-        return False
-
     def get_notification_users(self) -> list:
         """return the last users who interacted with you"""
         list_users = []
@@ -685,7 +647,7 @@ class Burbnbot:
                 self.d(resourceId="android:id/list", className="androidx.recyclerview.widget.RecyclerView").swipe("up")
                 for txt in self.d(resourceId="android:id/list",
                                   className="androidx.recyclerview.widget.RecyclerView").child(
-                        className="android.widget.TextView"):
+                    className="android.widget.TextView"):
                     if self.__is_date(txt.get_text()):
                         uiautomator2.logger.info("{} last post: {}".format(username, txt.get_text()))
                         return self.__count_days(txt.get_text())
@@ -693,6 +655,71 @@ class Burbnbot:
                 return 0
         except Exception as e:
             uiautomator2.logger.error(e)
+
+    def follow_n_save(self, amount: int):
+        try:
+            i = 0
+            list_urls = []
+            if self.open_home_feed():
+                if self.d(description="Search and Explore").click_exists(timeout=3):
+                    if self.d(resourceId="com.instagram.android:id/image_button", instance=0).click_exists(timeout=3):
+                        while i < amount:
+                            if not self.d(resourceId="com.instagram.android:id/button", text="Follow").exists:
+                                self.d(resourceId="com.instagram.android:id/refreshable_container").swipe("up")
+                            else:
+                                if self.d(resourceId="com.instagram.android:id/button", text="Follow").sibling(
+                                        resourceId="com.instagram.android:id/feed_more_button_stub").click_exists(
+                                        timeout=3):
+                                    if self.d(resourceId="com.instagram.android:id/action_sheet_row_text_view",
+                                              text="Copy Link").click_exists(timeout=3):
+                                        self.wait(2)
+                                        if self.d(resourceId="com.instagram.android:id/button",
+                                                  text="Follow").click_exists(timeout=3):
+                                            uiautomator2.logger.info("Following user: {}".format(
+                                                self.d(resourceId="com.instagram.android:id/button",
+                                                       text="Following").sibling(
+                                                    resourceId="com.instagram.android:id/row_feed_photo_profile_name").get_text().split(
+                                                    " ")[0]))
+                                            list_urls.append(self.d.clipboard.split("?")[0])
+                                            i += 1
+                        for u in list_urls:
+                            self.__reset_app()
+                            while self.d(resourceId='com.instagram.android:id/tab_bar').exists:
+                                self.d.shell("am start -a android.intent.action.VIEW -d {}".format(u))
+                                self.wait(2)
+
+                            self.__save_colletion_today(u)
+
+        except Exception as e:
+            uiautomator2.logger.error(e)
+
+    def __save_colletion_today(self, u):
+        while not self.d(resourceId="com.instagram.android:id/save_to_collection_action_bar_title"):
+            self.d(resourceId="com.instagram.android:id/row_feed_button_save").long_click(duration=1)
+            self.wait(2)
+        str_collection_name = str(datetime.date.today())
+        if self.d(resourceId="com.instagram.android:id/collection_name").exists:
+            collections_name = [e.get_text() for e in self.d(resourceId="com.instagram.android:id/collection_name")]
+            lst = ""
+            while not lst == collections_name[-1]:
+                if self.d(text=str_collection_name).exists:
+                    self.d(text=str_collection_name).click()
+                    uiautomator2.logger.info("Post {} saved in collection {}.".format(u, str_collection_name))
+                    return True
+                collections_name = collections_name + [e.get_text() for e in
+                                                       self.d(resourceId="com.instagram.android:id/collection_name")]
+                self.__scrool_elem_hori(self.d(resourceId="com.instagram.android:id/selectable_image"))
+                lst = self.d(resourceId="com.instagram.android:id/collection_name")[-1].get_text()
+
+            self.d(resourceId='com.instagram.android:id/save_to_collection_new_collection_button').click()
+            self.wait()
+            self.d(resourceId='com.instagram.android:id/create_collection_edit_text').send_keys(str_collection_name)
+            self.d(resourceId='com.instagram.android:id/save_to_collection_action_button').click()
+            uiautomator2.logger.info("New collection {} created.".format(str_collection_name))
+            uiautomator2.logger.info("Post {} saved in collection {}.".format(u, str_collection_name))
+            return True
+
+        return False
 
     def logout_other_devices(self):
         self.d(resourceId="com.instagram.android:id/profile_tab").click()

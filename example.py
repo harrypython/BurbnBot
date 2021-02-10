@@ -12,6 +12,11 @@ for user in [u for u in users_following if u not in users_followers]:
     # unfollow who don't follow you back
     bot.unfollow(username=user)
 
+# open explorer session, follow 10 new  users
+# and save the posts in a collection with name
+# yyyy-mm-dd. This way you can check the users
+# followed by the app
+bot.follow_n_save(amount=10)
 
 users_following = bot.get_following_list()
 if len(users_following):
