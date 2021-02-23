@@ -5,17 +5,9 @@ import uiautomator2
 from time import sleep
 
 
-class MediaType(object):
-    """Type of medias on Instagram"""
-    PHOTO: int = 1  #: Photo media type
-    VIDEO: int = 2  #: Video media type
-    CAROUSEL: int = 8  #: A album with photos and/or videos
-
-
 class Burbnbot:
     d: uiautomator2.Device
     version_app: str = "173.0.0.39.120"
-    version_android: str = "9"
     month_list: list = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
                         "October", "November", "December"]
     checkfor = [" hours ago", " hour ago", " days ago", " day ago", " minute ago", " minutes ago"]
@@ -139,14 +131,6 @@ class Burbnbot:
             ty = e[0].info['visibleBounds']['bottom']
             self.d.swipe(fx, fy, tx, ty, duration=0)
 
-    def __get_type_media(self) -> int:
-        if self.d(resourceId="com.instagram.android:id/carousel_media_group").exists:
-            return MediaType.CAROUSEL
-        if self.d(resourceId="com.instagram.android:id/row_feed_photo_imageview").info['contentDescription']. \
-                startswith("Video by "):
-            return MediaType.VIDEO
-        return MediaType.PHOTO
-
     def open_home_feed(self) -> bool:
         try:
             uiautomator2.logger.info("Opening home feed")
@@ -240,8 +224,9 @@ class Burbnbot:
             self.__reset_app()
             url = "https://www.instagram.com/explore/locations/{}/".format(locationcode)
             uiautomator2.logger.info("Opening location {}.".format(url))
-            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
-            self.wait(5)
+            while not self.d(resourceId="com.instagram.android:id/row_map_header_imageview").exists:
+                self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+                self.wait(5)
             if tab is not None:
                 while not self.d(text="{}".format(tab)).exists:
                     self.wait(1)
@@ -265,10 +250,11 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         try:
-            self.__reset_app()
+            self.d.app_stop_all()
             url = "https://www.instagram.com/{}/".format(username)
             uiautomator2.logger.info("Opening profile {}.".format(url))
-            while not self.d(resourceId="com.instagram.android:id/action_bar_title", text=username).exists:
+            self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
+            while not self.d(resourceId="com.instagram.android:id/action_bar_title").get_text().strip() == username:
                 self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
                 self.wait(2)
 
@@ -302,6 +288,7 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         try:
+            self.__reset_app()
             url = "https://www.instagram.com/explore/tags/{}/".format(tag)
             uiautomator2.logger.info("Opening hashtag: {}".format(tag))
             while not self.d(resourceId="com.instagram.android:id/action_bar_new_title_layout").exists:
@@ -357,16 +344,12 @@ class Burbnbot:
 
         return list(dict.fromkeys(lu))
 
-    def __double_click(self, e: uiautomator2.UiObject):
-        """Double click center the element :param e: Element
-
-        Args:
-            e (uiautomator2.UiObject): Element
-        """
-        x, y = e.center()
-        self.d.double_click(x, y, duration=0.1)
-
     def get_following_list(self) -> list:
+        """
+
+        Returns:
+            list: list of usernames
+        """
         list_following = []
         try:
             self.__reset_app()
@@ -463,7 +446,6 @@ class Burbnbot:
             amount (int): number of posts to like
         """
         lk = 0
-        subtit: str = "com.instagram.android:id/secondary_label"
         try:
             while lk < amount:
                 try:
@@ -526,7 +508,8 @@ class Burbnbot:
                 uiautomator2.logger.info("Unfollowing user: {}".format(username))
                 self.d(className="android.widget.Button", text="Following").click()
                 self.d(resourceId="com.instagram.android:id/follow_sheet_unfollow_row").click()
-                if self.d(resourceId="com.instagram.android:id/dialog_body").exists:
+                if self.d(resourceId="com.instagram.android:id/igds_headline_body").exists:
+                    uiautomator2.logger.info(self.d(resourceId="com.instagram.android:id/igds_headline_body").get_text())
                     self.d(resourceId="com.instagram.android:id/primary_button").click()
                 return True
         except Exception as e:
@@ -586,7 +569,8 @@ class Burbnbot:
                            self.d(resourceId="com.instagram.android:id/follow_button", text="Following")
                            if self.d(resourceId="com.instagram.android:id/follow_button", text="Following").exists]
                 self.__scroll_elem_vert(self.d(resourceId="com.instagram.android:id/follow_list_user_imageview"))
-                if not self.d(resourceId="com.instagram.android:id/action_bar_textview_title").get_text() == "Hashtags":
+
+                if not self.d(resourceId="com.instagram.android:id/action_bar_title").get_text() == "Hashtags":
                     self.d.press("back")
 
             fh = fh + [lst_btn.info.get("contentDescription").split()[1] for lst_btn in
@@ -640,14 +624,19 @@ class Burbnbot:
         except Exception as e:
             uiautomator2.logger.error(e)
 
-    def get_days_lastpost(self, username):
+    def get_days_lastpost(self, username: str) -> int:
+        """
+        Args:
+            username (str): username.
+        Returns:
+            int: Number of days of the last post
+        """
         try:
             if self.open_profile(username=username, open_post=True):
                 self.wait(5)
                 self.d(resourceId="android:id/list", className="androidx.recyclerview.widget.RecyclerView").swipe("up")
-                for txt in self.d(resourceId="android:id/list",
-                                  className="androidx.recyclerview.widget.RecyclerView").child(
-                    className="android.widget.TextView"):
+                for txt in self.d(resourceId="android:id/list", className="androidx.recyclerview.widget.RecyclerView")\
+                        .child(className="android.widget.TextView"):
                     if self.__is_date(txt.get_text()):
                         uiautomator2.logger.info("{} last post: {}".format(username, txt.get_text()))
                         return self.__count_days(txt.get_text())
