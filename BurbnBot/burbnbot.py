@@ -141,35 +141,6 @@ class Burbnbot:
             uiautomator2.logger.error(e)
             return False
 
-    def get_users_liked_by_you(self, amount):
-        self.d(resourceId="com.instagram.android:id/profile_tab").click()
-        self.d(resourceId="com.instagram.android:id/profile_tab").click()
-        self.d(description="Options").click()
-        self.d(resourceId="com.instagram.android:id/menu_settings_row").click()
-        self.d(resourceId="com.instagram.android:id/row_simple_text_textview", text="Account").click()
-        self.d(resourceId="com.instagram.android:id/row_simple_text_textview", text="Posts You've Liked").click()
-        u = []
-        while not self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier").exists:
-            self.wait()
-        while True:
-            for c in [r.child(className="android.widget.ImageView") for r in
-                      self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier")]:
-                for p in c:
-                    p.click()
-                    if self.d(resourceId="com.instagram.android:id/button", text="Follow").exists:
-                        u.append(self.d(
-                            resourceId="com.instagram.android:id/row_feed_photo_profile_name").get_text().split()[0])
-                    self.d.press("back")
-            self.__scroll_elem_vert(self.d(resourceId="com.instagram.android:id/media_set_row_content_identifier"))
-            while self.d(resourceId="com.instagram.android:id/row_load_more_button").exists:
-                self.d(resourceId="com.instagram.android:id/row_load_more_button").click()
-                self.wait()
-            u = list(dict.fromkeys(u))
-            if len(u) > amount:
-                break
-
-        return u[:amount]
-
     def login(self, username: str, password: str, reset: bool = False):
         """
         Args:
@@ -440,10 +411,11 @@ class Burbnbot:
             elem.click()
             sleep(random.randint(3, 5))
 
-    def like_n_swipe(self, amount: int = 1):
+    def like_n_swipe(self, amount: int = 1, skip_already_liked: bool = False):
         """
         Args:
             amount (int): number of posts to like
+            skip_already_liked (bool): posts already liked count to amount
         """
         lk = 0
         try:
@@ -451,13 +423,15 @@ class Burbnbot:
                 try:
                     if self.d(resourceId="com.instagram.android:id/secondary_label", text="Sponsored").exists:
                         self.__skip_sponsored()
+                    if skip_already_liked:
+                        if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Liked").exists:
+                            lk += 1
+                            uiautomator2.logger.info("Already liked {}/{}".format(lk, amount))
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in
-                                       self.d(resourceId="com.instagram.android:id/row_feed_button_like",
-                                              description="Like")])
+                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
                         uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
                     else:
-                        self.d(resourceId="com.instagram.android:id/refreshable_container").swipe(direction="up")
+                        self.d(scrollable=True).scroll()
                 except uiautomator2.exceptions.UiObjectNotFoundError as e:
                     self.__not_found_like(e)
                     pass
