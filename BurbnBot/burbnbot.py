@@ -114,8 +114,10 @@ class Burbnbot:
             ty = e[0].info['visibleBounds']['bottom']
             if fy == ty:
                 e.swipe("up")
+                return True
             else:
-                self.d.swipe(fx, fy, tx, ty, duration=0)
+                return self.d.swipe(fx, fy, tx, ty, duration=0)
+        return False
 
     def __scrool_elem_hori(self, e: uiautomator2.UiObject):
         """take the last element informed in e and scroll to the first element
@@ -151,8 +153,9 @@ class Burbnbot:
         if reset:
             self.d.app_clear("com.instagram.android")
         self.d.app_start(package_name="com.instagram.android")
-        if self.d(text="Log In").exists:
-            self.d(text="Log In").click()
+        while not self.d(text="Log In").exists:
+            self.wait(1)
+        self.d(text="Log In").click()
         if self.d(resourceId='com.instagram.android:id/login_username').exists and self.d(
                 resourceId='com.instagram.android:id/password').exists:
             self.d(resourceId='com.instagram.android:id/login_username').send_keys(username)
@@ -354,6 +357,7 @@ class Burbnbot:
                                     list_following.append(elem.get_text())
                     except uiautomator2.exceptions.UiObjectNotFoundError:
                         pass
+
                     self.__scroll_elem_vert(self.d(resourceId="com.instagram.android:id/follow_list_container"))
 
                     if self.d(text="Suggestions for you").exists:
@@ -456,8 +460,8 @@ class Burbnbot:
         self.d.swipe(fx, fy, tx, ty, duration=0)
 
     def __not_found_like(self, e: uiautomator2.UiObjectNotFoundError):
-        if self.d(resourceId="com.instagram.android:id/default_dialog_title").exists:
-            if self.d(resourceId="com.instagram.android:id/default_dialog_title").get_text() == "Try Again Later":
+        if self.d(resourceId="com.instagram.android:id/igds_headline_headline").exists:
+            if self.d(resourceId="com.instagram.android:id/igds_headline_headline").get_text() == "Try Again Later":
                 uiautomator2.logger.critical("ERROR: TOO MANY REQUESTS, TAKE A BREAK HAMILTON.")
                 self.d.app_clear(package_name="com.instagram.android")
                 quit(1)
