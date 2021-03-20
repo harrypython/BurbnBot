@@ -460,6 +460,11 @@ class Burbnbot:
         self.d.swipe(fx, fy, tx, ty, duration=0)
 
     def __not_found_like(self, e: uiautomator2.UiObjectNotFoundError):
+        if self.d(text="Your Account Was Compromised"):
+            uiautomator2.logger.critical("ERROR: THEY GOT YOU! Change your password to continue using Instagram.")
+            self.d.app_clear(package_name="com.instagram.android")
+            quit(1)
+
         if self.d(resourceId="com.instagram.android:id/igds_headline_headline").exists:
             if self.d(resourceId="com.instagram.android:id/igds_headline_headline").get_text() == "Try Again Later":
                 uiautomator2.logger.critical("ERROR: TOO MANY REQUESTS, TAKE A BREAK HAMILTON.")
