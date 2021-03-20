@@ -21,7 +21,7 @@ class Burbnbot:
 
         uiautomator2.logger = uiautomator2.setup_logger(
             "uiautomator2",
-            logfile="log/{}.log".format(str(datetime.date.today())),
+            logfile="log/{}.log".format(str(datetime.datetime.now()).replace(":", "-").replace(" ", "_")[:16]),
             level=uiautomator2.logging.DEBUG)
 
         if device is None:
@@ -467,6 +467,7 @@ class Burbnbot:
                 quit(1)
         uiautomator2.logger.warning("Element not found: {} You probably don't have to worry about.".format(e.data))
         uiautomator2.logger.error(e)
+        self.d.screenshot("log/{}.jpg".format(datetime.datetime.now().strftime("%Y-%m-%d_-_%H_%M_%S-%f%z")))
 
         # sometimes a wrong click open a different screen
         if (self.d(resourceId="com.instagram.android:id/profile_header_avatar_container_top_left_stub").exists or
