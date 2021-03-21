@@ -133,6 +133,12 @@ class Burbnbot:
             ty = e[0].info['visibleBounds']['bottom']
             self.d.swipe(fx, fy, tx, ty, duration=0)
 
+    def unlock_screen(self):
+        self.d.screen_off()
+        self.d.screen_on()
+        return self.d(resourceId="com.android.systemui:id/keyguard_indication_area").drag_to(
+            self.d(resourceId="com.android.systemui:id/lock_icon"))
+
     def open_home_feed(self) -> bool:
         try:
             uiautomator2.logger.info("Opening home feed")
@@ -428,11 +434,14 @@ class Burbnbot:
                     if self.d(resourceId="com.instagram.android:id/secondary_label", text="Sponsored").exists:
                         self.__skip_sponsored()
                     if skip_already_liked:
-                        if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Liked").exists:
+                        if self.d(resourceId="com.instagram.android:id/row_feed_button_like",
+                                  description="Liked").exists:
                             lk += 1
                             uiautomator2.logger.info("Already liked {}/{}".format(lk, amount))
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
+                        lk = lk + len([self.__click_n_wait(e) for e in
+                                       self.d(resourceId="com.instagram.android:id/row_feed_button_like",
+                                              description="Like")])
                         uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
                     else:
                         self.d(scrollable=True).scroll()
@@ -493,7 +502,8 @@ class Burbnbot:
                 self.d(className="android.widget.Button", text="Following").click()
                 self.d(resourceId="com.instagram.android:id/follow_sheet_unfollow_row").click()
                 if self.d(resourceId="com.instagram.android:id/igds_headline_body").exists:
-                    uiautomator2.logger.info(self.d(resourceId="com.instagram.android:id/igds_headline_body").get_text())
+                    uiautomator2.logger.info(
+                        self.d(resourceId="com.instagram.android:id/igds_headline_body").get_text())
                     self.d(resourceId="com.instagram.android:id/primary_button").click()
                 return True
         except Exception as e:
@@ -619,7 +629,7 @@ class Burbnbot:
             if self.open_profile(username=username, open_post=True):
                 self.wait(5)
                 self.d(resourceId="android:id/list", className="androidx.recyclerview.widget.RecyclerView").swipe("up")
-                for txt in self.d(resourceId="android:id/list", className="androidx.recyclerview.widget.RecyclerView")\
+                for txt in self.d(resourceId="android:id/list", className="androidx.recyclerview.widget.RecyclerView") \
                         .child(className="android.widget.TextView"):
                     if self.__is_date(txt.get_text()):
                         uiautomator2.logger.info("{} last post: {}".format(username, txt.get_text()))
@@ -642,7 +652,7 @@ class Burbnbot:
                             else:
                                 if self.d(resourceId="com.instagram.android:id/button", text="Follow").sibling(
                                         resourceId="com.instagram.android:id/feed_more_button_stub").click_exists(
-                                        timeout=3):
+                                    timeout=3):
                                     if self.d(resourceId="com.instagram.android:id/action_sheet_row_text_view",
                                               text="Copy Link").click_exists(timeout=3):
                                         self.wait(2)
