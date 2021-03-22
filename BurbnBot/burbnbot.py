@@ -8,9 +8,14 @@ from time import sleep
 class Burbnbot:
     d: uiautomator2.Device
     version_app: str = "173.0.0.39.120"
-    month_list: list = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+    month_list: list = ["January", "February", "March",
+                        "April", "May", "June",
+                        "July", "August", "September",
                         "October", "November", "December"]
     checkfor = [" hours ago", " hour ago", " days ago", " day ago", " minute ago", " minutes ago"]
+    amount_liked: int = 0
+    amount_to_pause: int = 50
+    pause_in_minutes: int = 45
 
     def __init__(self, device: str = None) -> None:
         """
@@ -136,8 +141,11 @@ class Burbnbot:
     def unlock_screen(self):
         self.d.screen_off()
         self.d.screen_on()
-        return self.d(resourceId="com.android.systemui:id/keyguard_indication_area").drag_to(
-            self.d(resourceId="com.android.systemui:id/lock_icon"))
+        if self.d(resourceId="com.android.systemui:id/keyguard_indication_area").exists:
+            return self.d(resourceId="com.android.systemui:id/keyguard_indication_area").drag_to(
+                self.d(resourceId="com.android.systemui:id/lock_icon"))
+        else:
+            return True
 
     def open_home_feed(self) -> bool:
         try:
@@ -417,9 +425,14 @@ class Burbnbot:
         return list(dict.fromkeys(list_followers))
 
     def __click_n_wait(self, elem: uiautomator2.UiObject):
-        if elem.exists:
-            elem.click()
-            sleep(random.randint(3, 5))
+        try:
+            if elem.exists:
+                r = elem.click()
+                sleep(random.randint(3, 5))
+                return True
+        except:
+            pass
+            return False
 
     def like_n_swipe(self, amount: int = 1, skip_already_liked: bool = False):
         """
@@ -439,9 +452,7 @@ class Burbnbot:
                             lk += 1
                             uiautomator2.logger.info("Already liked {}/{}".format(lk, amount))
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in
-                                       self.d(resourceId="com.instagram.android:id/row_feed_button_like",
-                                              description="Like")])
+                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
                         uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
                     else:
                         self.d(scrollable=True).scroll()
@@ -451,6 +462,10 @@ class Burbnbot:
         except Exception as e:
             self.__treat_exception(e)
             return None
+
+        self.amount_liked += lk
+        if self.amount_liked >= self.amount_to_pause:
+            sleep(self.pause_in_minutes*60)
 
         uiautomator2.logger.info("Done: Liked {}/{}".format(lk, amount))
 
