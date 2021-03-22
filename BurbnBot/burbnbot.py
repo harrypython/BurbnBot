@@ -452,7 +452,9 @@ class Burbnbot:
                             lk += 1
                             uiautomator2.logger.info("Already liked {}/{}".format(lk, amount))
                     if self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like").exists:
-                        lk = lk + len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
+                        real_liked = len([self.__click_n_wait(e) for e in self.d(resourceId="com.instagram.android:id/row_feed_button_like", description="Like")])
+                        lk = lk + real_liked
+                        self.amount_liked += real_liked
                         uiautomator2.logger.info("Liking {}/{}".format(lk, amount))
                     else:
                         self.d(scrollable=True).scroll()
@@ -463,9 +465,10 @@ class Burbnbot:
             self.__treat_exception(e)
             return None
 
-        self.amount_liked += lk
         if self.amount_liked >= self.amount_to_pause:
+            uiautomator2.logger.info("Total of {} posts liked. Sleeping for {} minutes.".format(self.amount_liked, self.pause_in_minutes))
             sleep(self.pause_in_minutes*60)
+            self.amount_liked = 0
 
         uiautomator2.logger.info("Done: Liked {}/{}".format(lk, amount))
 
