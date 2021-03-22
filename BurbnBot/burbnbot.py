@@ -465,7 +465,9 @@ class Burbnbot:
 
         self.amount_liked += lk
         if self.amount_liked >= self.amount_to_pause:
+            uiautomator2.logger.info("Total of {} posts liked. Sleeping for {} minutes.".format(self.amount_liked, self.pause_in_minutes))
             sleep(self.pause_in_minutes*60)
+            self.amount_liked = 0
 
         uiautomator2.logger.info("Done: Liked {}/{}".format(lk, amount))
 
