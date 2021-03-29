@@ -15,7 +15,7 @@ class Burbnbot:
     checkfor = [" hours ago", " hour ago", " days ago", " day ago", " minute ago", " minutes ago"]
     amount_liked: int = 0
     amount_to_pause: int = 50
-    pause_in_minutes: int = 45
+    pause_in_minutes: int = 50
 
     def __init__(self, device: str = None) -> None:
         """
@@ -428,7 +428,7 @@ class Burbnbot:
         try:
             if elem.exists:
                 r = elem.click()
-                sleep(random.randint(3, 5))
+                sleep(random.randint(30, 60))
                 return True
         except:
             pass
