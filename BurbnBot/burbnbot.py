@@ -428,7 +428,7 @@ class Burbnbot:
         try:
             if elem.exists:
                 r = elem.click()
-                sleep(random.randint(30, 60))
+                sleep(random.randint(5, 20))
                 return True
         except:
             pass
