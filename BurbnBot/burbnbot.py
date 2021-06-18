@@ -239,7 +239,6 @@ class Burbnbot:
             bool: The return value. True for success, False otherwise.
         """
         try:
-            self.d.app_stop_all()
             url = "https://www.instagram.com/{}/".format(username)
             uiautomator2.logger.info("Opening profile {}.".format(url))
             self.d.shell("am start -a android.intent.action.VIEW -d {}".format(url))
@@ -263,6 +262,7 @@ class Burbnbot:
             return True
         except Exception as e:
             uiautomator2.logger.info(e)
+            self.d.app_stop_all()
             return False
 
     def open_tag(self, tag: str, tab: str = "Recent", check_banned: bool = True) -> bool:

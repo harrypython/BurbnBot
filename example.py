@@ -1,6 +1,101 @@
+from typing import Dict
 from BurbnBot import Burbnbot
+from InstagramAPI import InstagramAPI
+import json
+import time
 
 bot = Burbnbot()
+
+
+#faster way to get data
+api = InstagramAPI(USERNAME, PASS)
+api.login()
+user_id = api.username_id
+
+def getTotalFollowers():
+    followers = []
+    next_max_id = True
+    while next_max_id:
+        # first iteration hack
+        if next_max_id is True:
+            next_max_id = ''
+
+        _ = api.getUserFollowers(user_id, maxid=next_max_id)
+        followers.extend(api.LastJson.get('users', []))
+        next_max_id = api.LastJson.get('next_max_id', '')
+    return followers
+
+def getTotalFollowing():
+    followers = []
+    next_max_id = True
+    while next_max_id:
+        # first iteration hack
+        if next_max_id is True:
+            next_max_id = ''
+
+        _ = api.getUserFollowings(user_id, maxid=next_max_id)
+        followers.extend(api.LastJson.get('users', []))
+        next_max_id = api.LastJson.get('next_max_id', '')
+    return followers
+
+def nonFollowers(followers, following):
+    nonFollowers = {}
+    dictFollowers = {}
+    for follower in followers:
+        dictFollowers[follower['username']] = follower['pk']
+
+    for followedUser in following:
+        if followedUser['username'] not in dictFollowers:
+            nonFollowers[followedUser['username']] = followedUser['pk']
+
+    return nonFollowers
+
+def getAllData():
+    followers = getTotalFollowers()
+    following = getTotalFollowing()
+    nonFollow = nonFollowers(followers, following)
+    i = len(nonFollow)
+    print('Number of followers:', len(followers))
+    with open("followers.txt","w", encoding="utf-8") as f:
+        f.write(str(followers))
+
+    time.sleep(3)
+    print('Number of following:', len(following))
+    with open("following.txt","w", encoding="utf-8") as f:
+        f.write(str(following))
+
+    time.sleep(3)
+    print('Number of nonFollowers:', i)
+    with open("nonFollowers.txt","w", encoding="utf-8") as f:
+        f.write(str(nonFollow))
+
+    time.sleep(3)
+
+#call this only once to fetch data and store it
+getAllData()
+
+#For unfollowing non followers
+i = 1
+with open("nonFollowers.json","r", encoding="utf-8") as f:
+    users : Dict = json.load(f)
+    usernames = list(Dict.fromkeys(users))
+    print(usernames)
+with open("unfollwed.txt","a") as f:
+    for user in usernames:
+        # unfollow who don't follow you back
+        bot.unfollow(username=user)
+        f.writelines(str(user) + "\n")
+        print(f"unfollowed: {i}")
+
+        users.pop(user)
+        f.flush()
+        with open("nonFollowers.json","w", encoding="utf-8") as f2:
+            json.dump(users,f2)
+        #set limit for no of unfollows
+        if(i==30):
+            break
+        i=i+1    
+        time.sleep(3)
 
 # get the following list (take a long time)
 users_following = bot.get_following_list()
